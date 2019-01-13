@@ -1,0 +1,18 @@
+language: go
+go:
+  - "1.11"
+
+notifications:
+  email: false
+
+env:
+  - GO111MODULE=on
+
+before_install:
+  - make download-tools
+
+install:
+  - go get
+
+script:
+  - make check

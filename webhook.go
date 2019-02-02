@@ -6,6 +6,5 @@ import "github.com/gin-gonic/gin"
 type Webhooker interface {
 	Plugin
 	// RegisterWebhook is called for plugins to create their own handler.
-	// Plugins can call mux.BasePath() to acquire their custom handler base path.
-	RegisterWebhook(mux gin.RouterGroup)
+	RegisterWebhook(basePath string, mux *gin.RouterGroup)
 }

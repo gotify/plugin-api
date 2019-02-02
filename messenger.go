@@ -5,6 +5,7 @@ type Message struct {
 	Message  string
 	Title    string
 	Priority int
+	Extras   map[string]interface{}
 }
 
 // MessageHandler consists of message callbacks to be used by plugins.

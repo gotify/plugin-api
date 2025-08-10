@@ -1,0 +1,12 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+option go_package = "./generated/protobuf";
+
+message RegisterBasePathRequest {
+    string base_path = 1;
+}
+
+service Webhooker {
+    rpc RegisterBasePath(RegisterBasePathRequest) returns (google.protobuf.Empty);
+}

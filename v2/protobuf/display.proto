@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "./generated/protobuf";
+
+message DisplayRequest {
+    string location = 1;
+}
+
+message DisplayResponse {
+    string display = 1;
+}
+
+service Displayer {
+    rpc Display(DisplayRequest) returns (DisplayResponse);
+}
+

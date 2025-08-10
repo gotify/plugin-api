@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "meta.proto";
+
+option go_package = "./generated/protobuf";
+
+message ServerVersionInfo {
+    string version = 1;
+    string commit = 2;
+    string buildDate = 3;
+}
+
+message StorageSaveRequest {
+    bytes data = 1;
+}
+
+message StorageLoadResponse {
+    bytes data = 1;
+}
+
+service Infra {
+    rpc GetServerVersion(google.protobuf.Empty) returns (ServerVersionInfo);
+    rpc SaveConfig(StorageSaveRequest) returns (google.protobuf.Empty);
+    rpc LoadConfig(google.protobuf.Empty) returns (StorageLoadResponse);
+    rpc SendMessage(Message) returns (google.protobuf.Empty);
+}

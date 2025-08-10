@@ -1,0 +1,65 @@
+syntax = "proto3";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "./generated/protobuf";
+
+message Error {
+    google.protobuf.Any details = 1;
+    string message = 2;
+    string type = 3;
+}
+
+message UserContext {
+    uint64 id = 1;
+    string name = 2;
+    bool admin = 3;
+}
+
+message Info {
+    string version = 1;
+    string author = 2;
+    string name = 3;
+    string website = 4;
+    string description = 5;
+    string license = 6;
+    string module_path = 7;
+}
+
+
+message ExtrasValue {
+    oneof value {
+        string json = 1;
+    }
+}
+
+message Message {
+    string message = 1;
+    string title = 2;
+    int32 priority = 3;
+    map<string, ExtrasValue> extras = 4;
+}
+
+message SetEnableRequest {
+    bool enable = 1;
+}
+
+message SetEnableSuccessResponse {
+
+}
+
+message SetEnableResponse {
+    oneof response {
+        SetEnableSuccessResponse success = 1;
+        Error error = 2;
+    }   
+}
+
+service PluginMeta {
+    rpc GetInfo(google.protobuf.Empty) returns (Info);
+}
+
+service Plugin {
+    rpc SetEnable(SetEnableRequest) returns (SetEnableResponse);
+}
+

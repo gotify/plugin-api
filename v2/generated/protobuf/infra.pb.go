@@ -84,7 +84,8 @@ func (x *ServerVersionInfo) GetBuildDate() string {
 
 type StorageSaveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Userid        uint64                 `protobuf:"varint,1,opt,name=userid,proto3" json:"userid,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,6 +120,13 @@ func (*StorageSaveRequest) Descriptor() ([]byte, []int) {
 	return file_infra_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *StorageSaveRequest) GetUserid() uint64 {
+	if x != nil {
+		return x.Userid
+	}
+	return 0
+}
+
 func (x *StorageSaveRequest) GetData() []byte {
 	if x != nil {
 		return x.Data
@@ -128,7 +136,8 @@ func (x *StorageSaveRequest) GetData() []byte {
 
 type StorageLoadResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Userid        uint64                 `protobuf:"varint,1,opt,name=userid,proto3" json:"userid,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -163,6 +172,13 @@ func (*StorageLoadResponse) Descriptor() ([]byte, []int) {
 	return file_infra_proto_rawDescGZIP(), []int{2}
 }
 
+func (x *StorageLoadResponse) GetUserid() uint64 {
+	if x != nil {
+		return x.Userid
+	}
+	return 0
+}
+
 func (x *StorageLoadResponse) GetData() []byte {
 	if x != nil {
 		return x.Data
@@ -179,11 +195,13 @@ const file_infra_proto_rawDesc = "" +
 	"\x11ServerVersionInfo\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06commit\x18\x02 \x01(\tR\x06commit\x12\x1c\n" +
-	"\tbuildDate\x18\x03 \x01(\tR\tbuildDate\"(\n" +
-	"\x12StorageSaveRequest\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data\")\n" +
-	"\x13StorageLoadResponse\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data2\xef\x01\n" +
+	"\tbuildDate\x18\x03 \x01(\tR\tbuildDate\"@\n" +
+	"\x12StorageSaveRequest\x12\x16\n" +
+	"\x06userid\x18\x01 \x01(\x04R\x06userid\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data\"A\n" +
+	"\x13StorageLoadResponse\x12\x16\n" +
+	"\x06userid\x18\x01 \x01(\x04R\x06userid\x12\x12\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data2\xef\x01\n" +
 	"\x05Infra\x12>\n" +
 	"\x10GetServerVersion\x12\x16.google.protobuf.Empty\x1a\x12.ServerVersionInfo\x129\n" +
 	"\n" +

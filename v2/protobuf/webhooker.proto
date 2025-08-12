@@ -1,10 +1,12 @@
 syntax = "proto3";
 import "google/protobuf/empty.proto";
+import "meta.proto";
 
 option go_package = "./generated/protobuf";
 
-message RegisterBasePathRequest {
-    string base_path = 1;
+message RegisterBasePathRequest {   
+    UserContext user = 1;
+    string base_path = 2;
 }
 
 service Webhooker {

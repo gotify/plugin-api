@@ -371,7 +371,8 @@ func (x *Message) GetExtras() map[string]*ExtrasValue {
 
 type SetEnableRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Enable        bool                   `protobuf:"varint,1,opt,name=enable,proto3" json:"enable,omitempty"`
+	User          *UserContext           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	Enable        bool                   `protobuf:"varint,2,opt,name=enable,proto3" json:"enable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -404,6 +405,13 @@ func (x *SetEnableRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use SetEnableRequest.ProtoReflect.Descriptor instead.
 func (*SetEnableRequest) Descriptor() ([]byte, []int) {
 	return file_meta_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SetEnableRequest) GetUser() *UserContext {
+	if x != nil {
+		return x.User
+	}
+	return nil
 }
 
 func (x *SetEnableRequest) GetEnable() bool {
@@ -564,9 +572,10 @@ const file_meta_proto_rawDesc = "" +
 	"\x06extras\x18\x04 \x03(\v2\x14.Message.ExtrasEntryR\x06extras\x1aG\n" +
 	"\vExtrasEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\"\n" +
-	"\x05value\x18\x02 \x01(\v2\f.ExtrasValueR\x05value:\x028\x01\"*\n" +
-	"\x10SetEnableRequest\x12\x16\n" +
-	"\x06enable\x18\x01 \x01(\bR\x06enable\"\x1a\n" +
+	"\x05value\x18\x02 \x01(\v2\f.ExtrasValueR\x05value:\x028\x01\"L\n" +
+	"\x10SetEnableRequest\x12 \n" +
+	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x16\n" +
+	"\x06enable\x18\x02 \x01(\bR\x06enable\"\x1a\n" +
 	"\x18SetEnableSuccessResponse\"v\n" +
 	"\x11SetEnableResponse\x125\n" +
 	"\asuccess\x18\x01 \x01(\v2\x19.SetEnableSuccessResponseH\x00R\asuccess\x12\x1e\n" +
@@ -575,8 +584,9 @@ const file_meta_proto_rawDesc = "" +
 	"\bresponse26\n" +
 	"\n" +
 	"PluginMeta\x12(\n" +
-	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info2<\n" +
-	"\x06Plugin\x122\n" +
+	"\aGetInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info2l\n" +
+	"\x06Plugin\x12.\n" +
+	"\rGetPluginInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info\x122\n" +
 	"\tSetEnable\x12\x11.SetEnableRequest\x1a\x12.SetEnableResponseB\x16Z\x14./generated/protobufb\x06proto3"
 
 var (
@@ -608,18 +618,21 @@ var file_meta_proto_goTypes = []any{
 var file_meta_proto_depIdxs = []int32{
 	9,  // 0: Error.details:type_name -> google.protobuf.Any
 	8,  // 1: Message.extras:type_name -> Message.ExtrasEntry
-	6,  // 2: SetEnableResponse.success:type_name -> SetEnableSuccessResponse
-	0,  // 3: SetEnableResponse.error:type_name -> Error
-	3,  // 4: Message.ExtrasEntry.value:type_name -> ExtrasValue
-	10, // 5: PluginMeta.GetInfo:input_type -> google.protobuf.Empty
-	5,  // 6: Plugin.SetEnable:input_type -> SetEnableRequest
-	2,  // 7: PluginMeta.GetInfo:output_type -> Info
-	7,  // 8: Plugin.SetEnable:output_type -> SetEnableResponse
-	7,  // [7:9] is the sub-list for method output_type
-	5,  // [5:7] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	1,  // 2: SetEnableRequest.user:type_name -> UserContext
+	6,  // 3: SetEnableResponse.success:type_name -> SetEnableSuccessResponse
+	0,  // 4: SetEnableResponse.error:type_name -> Error
+	3,  // 5: Message.ExtrasEntry.value:type_name -> ExtrasValue
+	10, // 6: PluginMeta.GetInfo:input_type -> google.protobuf.Empty
+	10, // 7: Plugin.GetPluginInfo:input_type -> google.protobuf.Empty
+	5,  // 8: Plugin.SetEnable:input_type -> SetEnableRequest
+	2,  // 9: PluginMeta.GetInfo:output_type -> Info
+	2,  // 10: Plugin.GetPluginInfo:output_type -> Info
+	7,  // 11: Plugin.SetEnable:output_type -> SetEnableResponse
+	9,  // [9:12] is the sub-list for method output_type
+	6,  // [6:9] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_meta_proto_init() }

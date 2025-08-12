@@ -23,7 +23,8 @@ const (
 
 type DisplayRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Location      string                 `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	User          *UserContext           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -56,6 +57,13 @@ func (x *DisplayRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use DisplayRequest.ProtoReflect.Descriptor instead.
 func (*DisplayRequest) Descriptor() ([]byte, []int) {
 	return file_display_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *DisplayRequest) GetUser() *UserContext {
+	if x != nil {
+		return x.User
+	}
+	return nil
 }
 
 func (x *DisplayRequest) GetLocation() string {
@@ -113,9 +121,11 @@ var File_display_proto protoreflect.FileDescriptor
 
 const file_display_proto_rawDesc = "" +
 	"\n" +
-	"\rdisplay.proto\",\n" +
-	"\x0eDisplayRequest\x12\x1a\n" +
-	"\blocation\x18\x01 \x01(\tR\blocation\"+\n" +
+	"\rdisplay.proto\x1a\n" +
+	"meta.proto\"N\n" +
+	"\x0eDisplayRequest\x12 \n" +
+	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x1a\n" +
+	"\blocation\x18\x02 \x01(\tR\blocation\"+\n" +
 	"\x0fDisplayResponse\x12\x18\n" +
 	"\adisplay\x18\x01 \x01(\tR\adisplay29\n" +
 	"\tDisplayer\x12,\n" +
@@ -137,15 +147,17 @@ var file_display_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_display_proto_goTypes = []any{
 	(*DisplayRequest)(nil),  // 0: DisplayRequest
 	(*DisplayResponse)(nil), // 1: DisplayResponse
+	(*UserContext)(nil),     // 2: UserContext
 }
 var file_display_proto_depIdxs = []int32{
-	0, // 0: Displayer.Display:input_type -> DisplayRequest
-	1, // 1: Displayer.Display:output_type -> DisplayResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: DisplayRequest.user:type_name -> UserContext
+	0, // 1: Displayer.Display:input_type -> DisplayRequest
+	1, // 2: Displayer.Display:output_type -> DisplayResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_display_proto_init() }
@@ -153,6 +165,7 @@ func file_display_proto_init() {
 	if File_display_proto != nil {
 		return
 	}
+	file_meta_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

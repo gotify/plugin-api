@@ -41,7 +41,8 @@ message Message {
 }
 
 message SetEnableRequest {
-    bool enable = 1;
+    UserContext user = 1;
+    bool enable = 2;
 }
 
 message SetEnableSuccessResponse {
@@ -60,6 +61,7 @@ service PluginMeta {
 }
 
 service Plugin {
+    rpc GetPluginInfo(google.protobuf.Empty) returns (Info);
     rpc SetEnable(SetEnableRequest) returns (SetEnableResponse);
 }
 

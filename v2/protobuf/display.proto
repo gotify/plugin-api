@@ -1,9 +1,11 @@
 syntax = "proto3";
+import "meta.proto";
 
 option go_package = "./generated/protobuf";
 
 message DisplayRequest {
-    string location = 1;
+    UserContext user = 1;
+    string location = 2;
 }
 
 message DisplayResponse {

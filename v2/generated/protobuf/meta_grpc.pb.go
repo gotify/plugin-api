@@ -122,13 +122,15 @@ var PluginMeta_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	Plugin_SetEnable_FullMethodName = "/Plugin/SetEnable"
+	Plugin_GetPluginInfo_FullMethodName = "/Plugin/GetPluginInfo"
+	Plugin_SetEnable_FullMethodName     = "/Plugin/SetEnable"
 )
 
 // PluginClient is the client API for Plugin service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PluginClient interface {
+	GetPluginInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
 	SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*SetEnableResponse, error)
 }
 
@@ -138,6 +140,16 @@ type pluginClient struct {
 
 func NewPluginClient(cc grpc.ClientConnInterface) PluginClient {
 	return &pluginClient{cc}
+}
+
+func (c *pluginClient) GetPluginInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Info)
+	err := c.cc.Invoke(ctx, Plugin_GetPluginInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *pluginClient) SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*SetEnableResponse, error) {
@@ -154,6 +166,7 @@ func (c *pluginClient) SetEnable(ctx context.Context, in *SetEnableRequest, opts
 // All implementations must embed UnimplementedPluginServer
 // for forward compatibility.
 type PluginServer interface {
+	GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error)
 	SetEnable(context.Context, *SetEnableRequest) (*SetEnableResponse, error)
 	mustEmbedUnimplementedPluginServer()
 }
@@ -165,6 +178,9 @@ type PluginServer interface {
 // pointer dereference when methods are called.
 type UnimplementedPluginServer struct{}
 
+func (UnimplementedPluginServer) GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPluginInfo not implemented")
+}
 func (UnimplementedPluginServer) SetEnable(context.Context, *SetEnableRequest) (*SetEnableResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetEnable not implemented")
 }
@@ -187,6 +203,24 @@ func RegisterPluginServer(s grpc.ServiceRegistrar, srv PluginServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Plugin_ServiceDesc, srv)
+}
+
+func _Plugin_GetPluginInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PluginServer).GetPluginInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Plugin_GetPluginInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PluginServer).GetPluginInfo(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Plugin_SetEnable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -214,6 +248,10 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Plugin",
 	HandlerType: (*PluginServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetPluginInfo",
+			Handler:    _Plugin_GetPluginInfo_Handler,
+		},
 		{
 			MethodName: "SetEnable",
 			Handler:    _Plugin_SetEnable_Handler,

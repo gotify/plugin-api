@@ -1,0 +1,124 @@
+package plugin
+
+import (
+	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"log"
+	"testing"
+	"time"
+
+	"github.com/gotify/plugin-api/v2/generated/protobuf"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/types/known/emptypb"
+)
+
+type dummyPlugin struct {
+	protobuf.UnimplementedPluginServer
+}
+
+var dummyPluginInfo = &protobuf.Info{
+	Name:        "dummy",
+	Version:     "test",
+	Description: "dummy plugin",
+	Author:      "gotify",
+	License:     "MIT",
+	ModulePath:  "dummy.example",
+}
+
+func (p *dummyPlugin) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+	return dummyPluginInfo, nil
+}
+
+func TestRPC(t *testing.T) {
+	rpc := NewServerMux(ServerVersionInfo{
+		Version:   "test",
+		Commit:    "test",
+		BuildDate: time.Now().Format(time.RFC3339),
+	})
+	defer rpc.Close()
+	_, pluginPriv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginCsrBytes, err := x509.CreateCertificateRequest(rand.Reader, new(x509.CertificateRequest), pluginPriv)
+	pluginCsr, err := x509.ParseCertificateRequest(pluginCsrBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := pluginCsr.CheckSignature(); err != nil {
+		t.Fatal(err)
+	}
+	pluginCert, err := rpc.SignPluginCSR(dummyPluginInfo.ModulePath, pluginCsr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginCertParsed, err := x509.ParseCertificate(pluginCert)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pluginTlsConfig := rpc.tlsClient.ServerTLSConfig()
+	pluginTlsConfig.Certificates = []tls.Certificate{
+		{
+			Certificate: [][]byte{pluginCert},
+			PrivateKey:  pluginPriv,
+		},
+	}
+	pluginListener, err := newListener()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pluginListener.Close()
+	pluginListenerTarget := pluginListener.Addr().String()
+	if pluginListener.Addr().Network() == "unix" {
+		pluginListenerTarget = "unix://" + pluginListenerTarget
+	}
+
+	pluginServer := grpc.NewServer(grpc.Creds(credentials.NewTLS(pluginTlsConfig)))
+	protobuf.RegisterPluginServer(pluginServer, &dummyPlugin{})
+	go pluginServer.Serve(pluginListener)
+	defer pluginServer.GracefulStop()
+
+	conn, err := rpc.RegisterPlugin(pluginListenerTarget, dummyPluginInfo.ModulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AddCert(rpc.CACert())
+	pluginClientTlsConfig := &tls.Config{
+		RootCAs:    caCertPool,
+		ServerName: ServerTLSName,
+		Certificates: []tls.Certificate{
+			{
+				Certificate: [][]byte{pluginCert},
+				PrivateKey:  pluginPriv,
+				Leaf:        pluginCertParsed,
+			},
+		},
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  caCertPool,
+	}
+
+	infraAddr := rpc.InfraAddr()
+	infraAddrTarget := infraAddr.String()
+	if infraAddr.Network() == "unix" {
+		infraAddrTarget = "unix://" + infraAddrTarget
+	}
+
+	pluginClient, err := grpc.NewClient(infraAddrTarget, grpc.WithTransportCredentials(credentials.NewTLS(pluginClientTlsConfig)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pluginClient.Close()
+	pluginInfraClient := protobuf.NewInfraClient(pluginClient)
+	version, err := pluginInfraClient.GetServerVersion(context.Background(), &emptypb.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("plugin version: %s", version.Version)
+}

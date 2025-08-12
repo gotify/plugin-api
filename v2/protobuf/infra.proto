@@ -12,11 +12,13 @@ message ServerVersionInfo {
 }
 
 message StorageSaveRequest {
-    bytes data = 1;
+    uint64 userid = 1;
+    bytes data = 2;
 }
 
 message StorageLoadResponse {
-    bytes data = 1;
+    uint64 userid = 1;
+    bytes data = 2;
 }
 
 service Infra {

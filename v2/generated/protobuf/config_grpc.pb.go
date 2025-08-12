@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -28,7 +27,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConfigurerClient interface {
-	DefaultConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Config, error)
+	DefaultConfig(ctx context.Context, in *DefaultConfigRequest, opts ...grpc.CallOption) (*Config, error)
 	ValidateAndSetConfig(ctx context.Context, in *ValidateAndSetConfigRequest, opts ...grpc.CallOption) (*ValidateAndSetConfigResponse, error)
 }
 
@@ -40,7 +39,7 @@ func NewConfigurerClient(cc grpc.ClientConnInterface) ConfigurerClient {
 	return &configurerClient{cc}
 }
 
-func (c *configurerClient) DefaultConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Config, error) {
+func (c *configurerClient) DefaultConfig(ctx context.Context, in *DefaultConfigRequest, opts ...grpc.CallOption) (*Config, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Config)
 	err := c.cc.Invoke(ctx, Configurer_DefaultConfig_FullMethodName, in, out, cOpts...)
@@ -64,7 +63,7 @@ func (c *configurerClient) ValidateAndSetConfig(ctx context.Context, in *Validat
 // All implementations must embed UnimplementedConfigurerServer
 // for forward compatibility.
 type ConfigurerServer interface {
-	DefaultConfig(context.Context, *emptypb.Empty) (*Config, error)
+	DefaultConfig(context.Context, *DefaultConfigRequest) (*Config, error)
 	ValidateAndSetConfig(context.Context, *ValidateAndSetConfigRequest) (*ValidateAndSetConfigResponse, error)
 	mustEmbedUnimplementedConfigurerServer()
 }
@@ -76,7 +75,7 @@ type ConfigurerServer interface {
 // pointer dereference when methods are called.
 type UnimplementedConfigurerServer struct{}
 
-func (UnimplementedConfigurerServer) DefaultConfig(context.Context, *emptypb.Empty) (*Config, error) {
+func (UnimplementedConfigurerServer) DefaultConfig(context.Context, *DefaultConfigRequest) (*Config, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DefaultConfig not implemented")
 }
 func (UnimplementedConfigurerServer) ValidateAndSetConfig(context.Context, *ValidateAndSetConfigRequest) (*ValidateAndSetConfigResponse, error) {
@@ -104,7 +103,7 @@ func RegisterConfigurerServer(s grpc.ServiceRegistrar, srv ConfigurerServer) {
 }
 
 func _Configurer_DefaultConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(DefaultConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -116,7 +115,7 @@ func _Configurer_DefaultConfig_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: Configurer_DefaultConfig_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConfigurerServer).DefaultConfig(ctx, req.(*emptypb.Empty))
+		return srv.(ConfigurerServer).DefaultConfig(ctx, req.(*DefaultConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

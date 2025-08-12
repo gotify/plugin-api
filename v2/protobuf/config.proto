@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/empty.proto";
 import "meta.proto";
 
 option go_package = "./generated/protobuf";
@@ -8,8 +7,13 @@ message Config {
     string config = 1;
 }
 
+message DefaultConfigRequest {
+    UserContext user = 1;
+}
+
 message ValidateAndSetConfigRequest {
-    Config config = 1;
+    UserContext user = 1;
+    Config config = 2;
 }
 
 message ValidateAndSetConfigSuccessResponse {
@@ -24,6 +28,6 @@ message ValidateAndSetConfigResponse {
 }
 
 service Configurer {
-    rpc DefaultConfig(google.protobuf.Empty) returns (Config);
+    rpc DefaultConfig(DefaultConfigRequest) returns (Config);
     rpc ValidateAndSetConfig(ValidateAndSetConfigRequest) returns (ValidateAndSetConfigResponse);
 }

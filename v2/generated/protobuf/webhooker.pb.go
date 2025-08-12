@@ -24,7 +24,8 @@ const (
 
 type RegisterBasePathRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	BasePath      string                 `protobuf:"bytes,1,opt,name=base_path,json=basePath,proto3" json:"base_path,omitempty"`
+	User          *UserContext           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	BasePath      string                 `protobuf:"bytes,2,opt,name=base_path,json=basePath,proto3" json:"base_path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -59,6 +60,13 @@ func (*RegisterBasePathRequest) Descriptor() ([]byte, []int) {
 	return file_webhooker_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *RegisterBasePathRequest) GetUser() *UserContext {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
 func (x *RegisterBasePathRequest) GetBasePath() string {
 	if x != nil {
 		return x.BasePath
@@ -70,9 +78,11 @@ var File_webhooker_proto protoreflect.FileDescriptor
 
 const file_webhooker_proto_rawDesc = "" +
 	"\n" +
-	"\x0fwebhooker.proto\x1a\x1bgoogle/protobuf/empty.proto\"6\n" +
-	"\x17RegisterBasePathRequest\x12\x1b\n" +
-	"\tbase_path\x18\x01 \x01(\tR\bbasePath2Q\n" +
+	"\x0fwebhooker.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\n" +
+	"meta.proto\"X\n" +
+	"\x17RegisterBasePathRequest\x12 \n" +
+	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x1b\n" +
+	"\tbase_path\x18\x02 \x01(\tR\bbasePath2Q\n" +
 	"\tWebhooker\x12D\n" +
 	"\x10RegisterBasePath\x12\x18.RegisterBasePathRequest\x1a\x16.google.protobuf.EmptyB\x16Z\x14./generated/protobufb\x06proto3"
 
@@ -91,16 +101,18 @@ func file_webhooker_proto_rawDescGZIP() []byte {
 var file_webhooker_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_webhooker_proto_goTypes = []any{
 	(*RegisterBasePathRequest)(nil), // 0: RegisterBasePathRequest
-	(*emptypb.Empty)(nil),           // 1: google.protobuf.Empty
+	(*UserContext)(nil),             // 1: UserContext
+	(*emptypb.Empty)(nil),           // 2: google.protobuf.Empty
 }
 var file_webhooker_proto_depIdxs = []int32{
-	0, // 0: Webhooker.RegisterBasePath:input_type -> RegisterBasePathRequest
-	1, // 1: Webhooker.RegisterBasePath:output_type -> google.protobuf.Empty
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: RegisterBasePathRequest.user:type_name -> UserContext
+	0, // 1: Webhooker.RegisterBasePath:input_type -> RegisterBasePathRequest
+	2, // 2: Webhooker.RegisterBasePath:output_type -> google.protobuf.Empty
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_webhooker_proto_init() }
@@ -108,6 +120,7 @@ func file_webhooker_proto_init() {
 	if File_webhooker_proto != nil {
 		return
 	}
+	file_meta_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

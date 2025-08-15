@@ -14,7 +14,7 @@ import (
 
 const ServerTLSName = "gotify.home.arpa"
 
-func buildPluginTLSName(moduleName string) string {
+func BuildPluginTLSName(moduleName string) string {
 	moduleNameHash := sha256.Sum256([]byte(moduleName))
 	hashHex := hex.EncodeToString(moduleNameHash[:])
 	return fmt.Sprintf("%s.plugins.gotify.home.arpa", hashHex)
@@ -49,8 +49,12 @@ func (s *EphemeralTLSClient) ClientTLSConfig(moduleName string) *tls.Config {
 			},
 		},
 		RootCAs:    s.createCertPool(),
-		ServerName: buildPluginTLSName(moduleName),
+		ServerName: BuildPluginTLSName(moduleName),
 	}
+}
+
+func (s *EphemeralTLSClient) CACert() *x509.Certificate {
+	return s.caCert
 }
 
 func (s *EphemeralTLSClient) SignCSR(dnsName string, csr *x509.CertificateRequest) ([]byte, error) {
@@ -82,7 +86,7 @@ func (s *EphemeralTLSClient) SignCSR(dnsName string, csr *x509.CertificateReques
 }
 
 func (s *EphemeralTLSClient) SignPluginCSR(moduleName string, csr *x509.CertificateRequest) ([]byte, error) {
-	return s.SignCSR(buildPluginTLSName(moduleName), csr)
+	return s.SignCSR(BuildPluginTLSName(moduleName), csr)
 }
 
 func NewEphemeralTLSClient() (*EphemeralTLSClient, error) {

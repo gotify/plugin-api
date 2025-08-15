@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func newListener() (net.Listener, error) {
+func NewListener() (net.Listener, error) {
 	tmpDir, err := os.MkdirTemp("", "gotify-plugin-*")
 	if err != nil {
 		return nil, err

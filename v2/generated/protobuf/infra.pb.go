@@ -201,8 +201,9 @@ const file_infra_proto_rawDesc = "" +
 	"\x04data\x18\x02 \x01(\fR\x04data\"A\n" +
 	"\x13StorageLoadResponse\x12\x16\n" +
 	"\x06userid\x18\x01 \x01(\x04R\x06userid\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data2\xef\x01\n" +
-	"\x05Infra\x12>\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data2\x98\x02\n" +
+	"\x05Infra\x12'\n" +
+	"\x06WhoAmI\x12\x16.google.protobuf.Empty\x1a\x05.Info\x12>\n" +
 	"\x10GetServerVersion\x12\x16.google.protobuf.Empty\x1a\x12.ServerVersionInfo\x129\n" +
 	"\n" +
 	"SaveConfig\x12\x13.StorageSaveRequest\x1a\x16.google.protobuf.Empty\x12:\n" +
@@ -229,18 +230,21 @@ var file_infra_proto_goTypes = []any{
 	(*StorageLoadResponse)(nil), // 2: StorageLoadResponse
 	(*emptypb.Empty)(nil),       // 3: google.protobuf.Empty
 	(*Message)(nil),             // 4: Message
+	(*Info)(nil),                // 5: Info
 }
 var file_infra_proto_depIdxs = []int32{
-	3, // 0: Infra.GetServerVersion:input_type -> google.protobuf.Empty
-	1, // 1: Infra.SaveConfig:input_type -> StorageSaveRequest
-	3, // 2: Infra.LoadConfig:input_type -> google.protobuf.Empty
-	4, // 3: Infra.SendMessage:input_type -> Message
-	0, // 4: Infra.GetServerVersion:output_type -> ServerVersionInfo
-	3, // 5: Infra.SaveConfig:output_type -> google.protobuf.Empty
-	2, // 6: Infra.LoadConfig:output_type -> StorageLoadResponse
-	3, // 7: Infra.SendMessage:output_type -> google.protobuf.Empty
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	3, // 0: Infra.WhoAmI:input_type -> google.protobuf.Empty
+	3, // 1: Infra.GetServerVersion:input_type -> google.protobuf.Empty
+	1, // 2: Infra.SaveConfig:input_type -> StorageSaveRequest
+	3, // 3: Infra.LoadConfig:input_type -> google.protobuf.Empty
+	4, // 4: Infra.SendMessage:input_type -> Message
+	5, // 5: Infra.WhoAmI:output_type -> Info
+	0, // 6: Infra.GetServerVersion:output_type -> ServerVersionInfo
+	3, // 7: Infra.SaveConfig:output_type -> google.protobuf.Empty
+	2, // 8: Infra.LoadConfig:output_type -> StorageLoadResponse
+	3, // 9: Infra.SendMessage:output_type -> google.protobuf.Empty
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name

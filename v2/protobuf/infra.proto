@@ -22,6 +22,7 @@ message StorageLoadResponse {
 }
 
 service Infra {
+    rpc WhoAmI(google.protobuf.Empty) returns (Info);
     rpc GetServerVersion(google.protobuf.Empty) returns (ServerVersionInfo);
     rpc SaveConfig(StorageSaveRequest) returns (google.protobuf.Empty);
     rpc LoadConfig(google.protobuf.Empty) returns (StorageLoadResponse);

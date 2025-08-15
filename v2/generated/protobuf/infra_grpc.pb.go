@@ -20,6 +20,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Infra_WhoAmI_FullMethodName           = "/Infra/WhoAmI"
 	Infra_GetServerVersion_FullMethodName = "/Infra/GetServerVersion"
 	Infra_SaveConfig_FullMethodName       = "/Infra/SaveConfig"
 	Infra_LoadConfig_FullMethodName       = "/Infra/LoadConfig"
@@ -30,6 +31,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InfraClient interface {
+	WhoAmI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
 	GetServerVersion(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ServerVersionInfo, error)
 	SaveConfig(ctx context.Context, in *StorageSaveRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	LoadConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StorageLoadResponse, error)
@@ -42,6 +44,16 @@ type infraClient struct {
 
 func NewInfraClient(cc grpc.ClientConnInterface) InfraClient {
 	return &infraClient{cc}
+}
+
+func (c *infraClient) WhoAmI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Info)
+	err := c.cc.Invoke(ctx, Infra_WhoAmI_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *infraClient) GetServerVersion(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ServerVersionInfo, error) {
@@ -88,6 +100,7 @@ func (c *infraClient) SendMessage(ctx context.Context, in *Message, opts ...grpc
 // All implementations must embed UnimplementedInfraServer
 // for forward compatibility.
 type InfraServer interface {
+	WhoAmI(context.Context, *emptypb.Empty) (*Info, error)
 	GetServerVersion(context.Context, *emptypb.Empty) (*ServerVersionInfo, error)
 	SaveConfig(context.Context, *StorageSaveRequest) (*emptypb.Empty, error)
 	LoadConfig(context.Context, *emptypb.Empty) (*StorageLoadResponse, error)
@@ -102,6 +115,9 @@ type InfraServer interface {
 // pointer dereference when methods are called.
 type UnimplementedInfraServer struct{}
 
+func (UnimplementedInfraServer) WhoAmI(context.Context, *emptypb.Empty) (*Info, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WhoAmI not implemented")
+}
 func (UnimplementedInfraServer) GetServerVersion(context.Context, *emptypb.Empty) (*ServerVersionInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetServerVersion not implemented")
 }
@@ -133,6 +149,24 @@ func RegisterInfraServer(s grpc.ServiceRegistrar, srv InfraServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Infra_ServiceDesc, srv)
+}
+
+func _Infra_WhoAmI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InfraServer).WhoAmI(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Infra_WhoAmI_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InfraServer).WhoAmI(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Infra_GetServerVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -214,6 +248,10 @@ var Infra_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Infra",
 	HandlerType: (*InfraServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "WhoAmI",
+			Handler:    _Infra_WhoAmI_Handler,
+		},
 		{
 			MethodName: "GetServerVersion",
 			Handler:    _Infra_GetServerVersion_Handler,

@@ -6,11 +6,11 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"log"
 	"testing"
 	"time"
 
 	"github.com/gotify/plugin-api/v2/generated/protobuf"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -41,25 +41,15 @@ func TestRPC(t *testing.T) {
 	})
 	defer rpc.Close()
 	_, pluginPriv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	pluginCsrBytes, err := x509.CreateCertificateRequest(rand.Reader, new(x509.CertificateRequest), pluginPriv)
 	pluginCsr, err := x509.ParseCertificateRequest(pluginCsrBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := pluginCsr.CheckSignature(); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+	assert.NoError(t, pluginCsr.CheckSignature())
 	pluginCert, err := rpc.SignPluginCSR(dummyPluginInfo.ModulePath, pluginCsr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	pluginCertParsed, err := x509.ParseCertificate(pluginCert)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	pluginTlsConfig := rpc.tlsClient.ServerTLSConfig()
 	pluginTlsConfig.Certificates = []tls.Certificate{
 		{
@@ -68,9 +58,8 @@ func TestRPC(t *testing.T) {
 		},
 	}
 	pluginListener, err := newListener()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	defer pluginListener.Close()
 	pluginListenerTarget := pluginListener.Addr().String()
 	if pluginListener.Addr().Network() == "unix" {
@@ -83,9 +72,7 @@ func TestRPC(t *testing.T) {
 	defer pluginServer.GracefulStop()
 
 	conn, err := rpc.RegisterPlugin(pluginListenerTarget, dummyPluginInfo.ModulePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	defer conn.Close()
 
 	caCertPool := x509.NewCertPool()
@@ -117,8 +104,15 @@ func TestRPC(t *testing.T) {
 	defer pluginClient.Close()
 	pluginInfraClient := protobuf.NewInfraClient(pluginClient)
 	version, err := pluginInfraClient.GetServerVersion(context.Background(), &emptypb.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("plugin version: %s", version.Version)
+	assert.NoError(t, err)
+	assert.Equal(t, version.Version, rpc.version.Version)
+	info, err := pluginInfraClient.WhoAmI(context.Background(), &emptypb.Empty{})
+	assert.NoError(t, err)
+
+	assert.Equal(t, info.Name, dummyPluginInfo.Name)
+	assert.Equal(t, info.Version, dummyPluginInfo.Version)
+	assert.Equal(t, info.Description, dummyPluginInfo.Description)
+	assert.Equal(t, info.Author, dummyPluginInfo.Author)
+	assert.Equal(t, info.License, dummyPluginInfo.License)
+	assert.Equal(t, info.ModulePath, dummyPluginInfo.ModulePath)
 }

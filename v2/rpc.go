@@ -56,17 +56,12 @@ type ServerVersionInfo struct {
 }
 
 type infraServerImpl struct {
+	server  *ServerMux
 	version ServerVersionInfo
 	protobuf.UnimplementedInfraServer
 }
 
 func (s *infraServerImpl) GetServerVersion(ctx context.Context, req *emptypb.Empty) (*protobuf.ServerVersionInfo, error) {
-	peer, ok := peer.FromContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("no peer in context")
-	}
-	authInfo := peer.AuthInfo.(*infraTlsAuthInfo)
-	log.Printf("GetServerVersion: server name %s, module name %s", authInfo.TLSInfo.State.ServerName, authInfo.moduleName)
 	return &protobuf.ServerVersionInfo{
 		Version:   s.version.Version,
 		Commit:    s.version.Commit,
@@ -74,18 +69,46 @@ func (s *infraServerImpl) GetServerVersion(ctx context.Context, req *emptypb.Emp
 	}, nil
 }
 
-type pluginConnection struct {
+func (s *infraServerImpl) WhoAmI(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+	peer, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("no peer in context")
+	}
+	authInfo := peer.AuthInfo.(*infraTlsAuthInfo)
+	return s.server.GetPluginInfo(authInfo.moduleName)
+}
+
+type PluginConnection struct {
 	info *protobuf.Info
 	conn *grpc.ClientConn
 }
 
 type ServerMux struct {
+	version               ServerVersionInfo
 	tlsClient             *EphemeralTLSClient
 	infraAddr             net.Addr
 	infraListener         net.Listener
 	infraServer           *grpc.Server
 	pluginDNSToModulePath map[string]string
-	pluginConnections     map[string]pluginConnection
+	pluginConnections     map[string]PluginConnection
+	protobuf.UnimplementedInfraServer
+}
+
+func (s *ServerMux) GetServerVersion(ctx context.Context, req *emptypb.Empty) (*protobuf.ServerVersionInfo, error) {
+	return &protobuf.ServerVersionInfo{
+		Version:   s.version.Version,
+		Commit:    s.version.Commit,
+		BuildDate: s.version.BuildDate,
+	}, nil
+}
+
+func (s *ServerMux) WhoAmI(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+	peer, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("no peer in context")
+	}
+	authInfo := peer.AuthInfo.(*infraTlsAuthInfo)
+	return s.GetPluginInfo(authInfo.moduleName)
 }
 
 type infraTlsCreds struct {
@@ -121,6 +144,7 @@ func (c *infraTlsCreds) ServerHandshake(rawConn net.Conn) (net.Conn, credentials
 	}, nil
 }
 
+// NewServerMux creates a server-side mux with an infra server that handles plugin-to-server calls.
 func NewServerMux(info ServerVersionInfo) *ServerMux {
 	tlsClient, err := NewEphemeralTLSClient()
 	if err != nil {
@@ -169,33 +193,41 @@ func NewServerMux(info ServerVersionInfo) *ServerMux {
 		pluginDNSToModulePath: pluginDNSToModulePath,
 		TransportCredentials:  credentials.NewTLS(infraTlsConfig),
 	}))
-	protobuf.RegisterInfraServer(infraServer, &infraServerImpl{
-		version: info,
-	})
+
 	listener, err := newListener()
 	if err != nil {
 		panic(err)
 	}
-	go infraServer.Serve(listener)
-
-	return &ServerMux{
+	mux := &ServerMux{
+		version:               info,
 		tlsClient:             tlsClient,
 		infraAddr:             listener.Addr(),
 		infraListener:         listener,
 		infraServer:           infraServer,
 		pluginDNSToModulePath: pluginDNSToModulePath,
-		pluginConnections:     make(map[string]pluginConnection),
+		pluginConnections:     make(map[string]PluginConnection),
 	}
+	protobuf.RegisterInfraServer(infraServer, &infraServerImpl{
+		server:  mux,
+		version: info,
+	})
+
+	go infraServer.Serve(listener)
+
+	return mux
 }
 
+// InfraAddr returns the address of the infra server for plugin-to-server callbacks.
 func (s *ServerMux) InfraAddr() net.Addr {
 	return s.infraAddr
 }
 
+// CACert returns the CA certificate for mutual TLS authentication.
 func (s *ServerMux) CACert() *x509.Certificate {
 	return s.tlsClient.caCert
 }
 
+// SignPluginCSR signs a certificate request for a plugin.
 func (s *ServerMux) SignPluginCSR(moduleName string, csr *x509.CertificateRequest) ([]byte, error) {
 	return s.tlsClient.SignPluginCSR(moduleName, csr)
 }
@@ -205,17 +237,38 @@ func (s *ServerMux) RegisterPlugin(target string, moduleName string) (*grpc.Clie
 	if err != nil {
 		return nil, err
 	}
+	if _, exists := s.pluginDNSToModulePath[buildPluginTLSName(moduleName)]; exists {
+		return nil, fmt.Errorf("plugin %s already registered", moduleName)
+	}
 	s.pluginDNSToModulePath[buildPluginTLSName(moduleName)] = moduleName
 	pluginClient := protobuf.NewPluginClient(grpcConn)
 	pluginInfo, err := pluginClient.GetPluginInfo(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		return nil, err
 	}
-	s.pluginConnections[moduleName] = pluginConnection{
+	s.pluginConnections[moduleName] = PluginConnection{
 		info: pluginInfo,
 		conn: grpcConn,
 	}
 	return grpcConn, nil
+}
+
+// GetPluginInfo returns the info of a plugin.
+func (s *ServerMux) GetPluginInfo(moduleName string) (*protobuf.Info, error) {
+	conn, ok := s.pluginConnections[moduleName]
+	if !ok {
+		return nil, fmt.Errorf("plugin %s not registered", moduleName)
+	}
+	return conn.info, nil
+}
+
+// GetPluginConnection returns the connection to the plugin for Server-to-Plugin calls.
+func (s *ServerMux) GetPluginConnection(moduleName string) (*grpc.ClientConn, error) {
+	conn, ok := s.pluginConnections[moduleName]
+	if !ok {
+		return nil, fmt.Errorf("plugin %s not registered", moduleName)
+	}
+	return conn.conn, nil
 }
 
 func (s *ServerMux) Close() error {

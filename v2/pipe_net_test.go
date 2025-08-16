@@ -19,7 +19,13 @@ import (
 )
 
 type dummyInfraServer struct {
-	protobuf.UnimplementedInfraServer
+	protobuf.UnimplementedPluginServer
+}
+
+func (s *dummyInfraServer) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+	return &protobuf.Info{
+		Version: "test",
+	}, nil
 }
 
 func (s *dummyInfraServer) GetServerVersion(ctx context.Context, req *emptypb.Empty) (*protobuf.ServerVersionInfo, error) {
@@ -72,7 +78,7 @@ func TestGrpcPipeNet(t *testing.T) {
 	}
 
 	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTLSConfig)))
-	protobuf.RegisterInfraServer(server, &dummyInfraServer{})
+	protobuf.RegisterPluginServer(server, &dummyInfraServer{})
 	go server.Serve(listener)
 	defer server.GracefulStop()
 
@@ -81,8 +87,8 @@ func TestGrpcPipeNet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	infraClient := protobuf.NewInfraClient(conn)
-	version, err := infraClient.GetServerVersion(context.Background(), &emptypb.Empty{})
+	infraClient := protobuf.NewPluginClient(conn)
+	version, err := infraClient.GetPluginInfo(context.Background(), &emptypb.Empty{})
 	if err != nil {
 		t.Fatal(err)
 	}

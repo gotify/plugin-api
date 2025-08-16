@@ -20,110 +20,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	PluginMeta_GetInfo_FullMethodName = "/PluginMeta/GetInfo"
-)
-
-// PluginMetaClient is the client API for PluginMeta service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type PluginMetaClient interface {
-	GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
-}
-
-type pluginMetaClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewPluginMetaClient(cc grpc.ClientConnInterface) PluginMetaClient {
-	return &pluginMetaClient{cc}
-}
-
-func (c *pluginMetaClient) GetInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Info)
-	err := c.cc.Invoke(ctx, PluginMeta_GetInfo_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// PluginMetaServer is the server API for PluginMeta service.
-// All implementations must embed UnimplementedPluginMetaServer
-// for forward compatibility.
-type PluginMetaServer interface {
-	GetInfo(context.Context, *emptypb.Empty) (*Info, error)
-	mustEmbedUnimplementedPluginMetaServer()
-}
-
-// UnimplementedPluginMetaServer must be embedded to have
-// forward compatible implementations.
-//
-// NOTE: this should be embedded by value instead of pointer to avoid a nil
-// pointer dereference when methods are called.
-type UnimplementedPluginMetaServer struct{}
-
-func (UnimplementedPluginMetaServer) GetInfo(context.Context, *emptypb.Empty) (*Info, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
-}
-func (UnimplementedPluginMetaServer) mustEmbedUnimplementedPluginMetaServer() {}
-func (UnimplementedPluginMetaServer) testEmbeddedByValue()                    {}
-
-// UnsafePluginMetaServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to PluginMetaServer will
-// result in compilation errors.
-type UnsafePluginMetaServer interface {
-	mustEmbedUnimplementedPluginMetaServer()
-}
-
-func RegisterPluginMetaServer(s grpc.ServiceRegistrar, srv PluginMetaServer) {
-	// If the following call pancis, it indicates UnimplementedPluginMetaServer was
-	// embedded by pointer and is nil.  This will cause panics if an
-	// unimplemented method is ever invoked, so we test this at initialization
-	// time to prevent it from happening at runtime later due to I/O.
-	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
-		t.testEmbeddedByValue()
-	}
-	s.RegisterService(&PluginMeta_ServiceDesc, srv)
-}
-
-func _PluginMeta_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(PluginMetaServer).GetInfo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: PluginMeta_GetInfo_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PluginMetaServer).GetInfo(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// PluginMeta_ServiceDesc is the grpc.ServiceDesc for PluginMeta service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var PluginMeta_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "PluginMeta",
-	HandlerType: (*PluginMetaServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "GetInfo",
-			Handler:    _PluginMeta_GetInfo_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "meta.proto",
-}
-
-const (
-	Plugin_GetPluginInfo_FullMethodName = "/Plugin/GetPluginInfo"
-	Plugin_SetEnable_FullMethodName     = "/Plugin/SetEnable"
+	Plugin_GetPluginInfo_FullMethodName   = "/Plugin/GetPluginInfo"
+	Plugin_RunUserInstance_FullMethodName = "/Plugin/RunUserInstance"
 )
 
 // PluginClient is the client API for Plugin service.
@@ -131,7 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PluginClient interface {
 	GetPluginInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
-	SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*SetEnableResponse, error)
+	RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UserUpdate], error)
 }
 
 type pluginClient struct {
@@ -152,22 +50,31 @@ func (c *pluginClient) GetPluginInfo(ctx context.Context, in *emptypb.Empty, opt
 	return out, nil
 }
 
-func (c *pluginClient) SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*SetEnableResponse, error) {
+func (c *pluginClient) RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UserUpdate], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SetEnableResponse)
-	err := c.cc.Invoke(ctx, Plugin_SetEnable_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[0], Plugin_RunUserInstance_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &grpc.GenericClientStream[UserInstanceRequest, UserUpdate]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Plugin_RunUserInstanceClient = grpc.ServerStreamingClient[UserUpdate]
 
 // PluginServer is the server API for Plugin service.
 // All implementations must embed UnimplementedPluginServer
 // for forward compatibility.
 type PluginServer interface {
 	GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error)
-	SetEnable(context.Context, *SetEnableRequest) (*SetEnableResponse, error)
+	RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[UserUpdate]) error
 	mustEmbedUnimplementedPluginServer()
 }
 
@@ -181,8 +88,8 @@ type UnimplementedPluginServer struct{}
 func (UnimplementedPluginServer) GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPluginInfo not implemented")
 }
-func (UnimplementedPluginServer) SetEnable(context.Context, *SetEnableRequest) (*SetEnableResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetEnable not implemented")
+func (UnimplementedPluginServer) RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[UserUpdate]) error {
+	return status.Errorf(codes.Unimplemented, "method RunUserInstance not implemented")
 }
 func (UnimplementedPluginServer) mustEmbedUnimplementedPluginServer() {}
 func (UnimplementedPluginServer) testEmbeddedByValue()                {}
@@ -223,23 +130,16 @@ func _Plugin_GetPluginInfo_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Plugin_SetEnable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetEnableRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Plugin_RunUserInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(UserInstanceRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(PluginServer).SetEnable(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Plugin_SetEnable_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PluginServer).SetEnable(ctx, req.(*SetEnableRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(PluginServer).RunUserInstance(m, &grpc.GenericServerStream[UserInstanceRequest, UserUpdate]{ServerStream: stream})
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Plugin_RunUserInstanceServer = grpc.ServerStreamingServer[UserUpdate]
 
 // Plugin_ServiceDesc is the grpc.ServiceDesc for Plugin service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -252,11 +152,13 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetPluginInfo",
 			Handler:    _Plugin_GetPluginInfo_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "SetEnable",
-			Handler:    _Plugin_SetEnable_Handler,
+			StreamName:    "RunUserInstance",
+			Handler:       _Plugin_RunUserInstance_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "meta.proto",
 }

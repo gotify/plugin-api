@@ -16,6 +16,18 @@ message UserContext {
     bool admin = 3;
 }
 
+message Capabilities {
+    optional uint32 Displayer = 1;
+    optional uint32 Configurer = 2;
+    optional uint32 Webhooker = 3;
+}
+
+message ServerVersionInfo {
+    string version = 1;
+    string commit = 2;
+    string buildDate = 3;
+}
+
 message Info {
     string version = 1;
     string author = 2;
@@ -24,8 +36,8 @@ message Info {
     string description = 5;
     string license = 6;
     string module_path = 7;
+    Capabilities capabilities = 8;
 }
-
 
 message ExtrasValue {
     oneof value {
@@ -45,23 +57,20 @@ message SetEnableRequest {
     bool enable = 2;
 }
 
-message SetEnableSuccessResponse {
-
+message UserUpdate {
+    oneof update {
+        Message message = 1;
+        string config = 2;
+    }
 }
 
-message SetEnableResponse {
-    oneof response {
-        SetEnableSuccessResponse success = 1;
-        Error error = 2;
-    }   
-}
-
-service PluginMeta {
-    rpc GetInfo(google.protobuf.Empty) returns (Info);
+message UserInstanceRequest {
+    ServerVersionInfo serverVersion = 1;
+    UserContext user = 2;
 }
 
 service Plugin {
     rpc GetPluginInfo(google.protobuf.Empty) returns (Info);
-    rpc SetEnable(SetEnableRequest) returns (SetEnableResponse);
+    rpc RunUserInstance(UserInstanceRequest) returns (stream UserUpdate);
 }
 

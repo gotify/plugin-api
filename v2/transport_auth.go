@@ -13,15 +13,20 @@ import (
 	"time"
 )
 
+const (
+	purposePluginRPC     = "rpc.plugin"
+	purposePluginWebhook = "webhook.plugin"
+)
+
 const ServerTLSName = "server.gotify.home.arpa"
 
-func BuildPluginTLSName(moduleName string) string {
+func BuildPluginTLSName(purpose string, moduleName string) string {
 	moduleNameParts := strings.Split(moduleName, "/")
 	for i := range moduleNameParts {
 		moduleNameParts[i] = hex.EncodeToString([]byte(moduleNameParts[i]))
 	}
 	slices.Reverse(moduleNameParts)
-	return fmt.Sprintf("%s.plugins.gotify.home.arpa", strings.Join(moduleNameParts, "."))
+	return fmt.Sprintf("%s.%s.plugins.gotify.home.arpa", strings.Join(moduleNameParts, "."), purpose)
 }
 
 type EphemeralTLSClient struct {
@@ -53,7 +58,7 @@ func (s *EphemeralTLSClient) ClientTLSConfig(moduleName string) *tls.Config {
 			},
 		},
 		RootCAs:    s.createCertPool(),
-		ServerName: BuildPluginTLSName(moduleName),
+		ServerName: BuildPluginTLSName(purposePluginRPC, moduleName),
 	}
 }
 
@@ -90,7 +95,7 @@ func (s *EphemeralTLSClient) SignCSR(dnsName string, csr *x509.CertificateReques
 }
 
 func (s *EphemeralTLSClient) SignPluginCSR(moduleName string, csr *x509.CertificateRequest) ([]byte, error) {
-	return s.SignCSR(BuildPluginTLSName(moduleName), csr)
+	return s.SignCSR(BuildPluginTLSName(purposePluginRPC, moduleName), csr)
 }
 
 func NewEphemeralTLSClient() (*EphemeralTLSClient, error) {

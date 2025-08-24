@@ -264,7 +264,7 @@ func (s *PluginShim) RunUserInstance(req *protobuf.UserInstanceRequest, stream p
 
 func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*PluginShim, error) {
 	pluginInfo := compatV1.GetPluginInfo()
-	tlsName := BuildPluginTLSName(pluginInfo.Name)
+	tlsName := BuildPluginTLSName(purposePluginRPC, pluginInfo.Name)
 
 	cliFlags, err := ParsePluginCLIFlags(cliArgs)
 	if err != nil {
@@ -325,16 +325,24 @@ func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*PluginShim, error) {
 }
 
 func (h *PluginShim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	pluginHostName := BuildPluginTLSName(h.pluginInfo.ModulePath)
-	if r.Host == pluginHostName {
+	if r.TLS == nil {
+		http.Error(w, "Must use TLS", http.StatusUpgradeRequired)
+		return
+	}
+
+	pluginRpcHostName := BuildPluginTLSName(purposePluginRPC, h.pluginInfo.ModulePath)
+
+	if r.TLS.ServerName == pluginRpcHostName {
 		if r.ProtoMajor != 2 {
 			http.Error(w, "Must use HTTP/2", http.StatusHTTPVersionNotSupported)
 			return
 		}
 		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
 			http.Error(w, "Must use application/grpc content type", http.StatusUnsupportedMediaType)
+			return
 		}
 		h.pluginServer.ServeHTTP(w, r)
+
 		return
 	}
 

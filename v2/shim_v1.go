@@ -346,10 +346,13 @@ func (h *PluginShim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.gin != nil {
+	pluginWebhookHostName := BuildPluginTLSName(purposePluginWebhook, h.pluginInfo.ModulePath)
+	if r.TLS.ServerName == pluginWebhookHostName {
 		h.gin.ServeHTTP(w, r)
 		return
 	}
+
+	http.Error(w, "Virtual host not found", http.StatusNotFound)
 }
 
 func (h *PluginShim) Serve(listener net.Listener) error {

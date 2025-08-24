@@ -73,20 +73,24 @@ type CompatV1Shim struct {
 	pluginServer *grpc.Server
 	pluginInfo   *papiv1.Info
 	http.Server
+}
+
+type compatV1ShimServer struct {
+	shim *CompatV1Shim
 	protobuf.UnimplementedPluginServer
 	protobuf.UnimplementedDisplayerServer
 	protobuf.UnimplementedConfigurerServer
 }
 
-func (s *CompatV1Shim) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+func (s *compatV1ShimServer) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
 	return &protobuf.Info{
-		Version:     s.pluginInfo.Version,
-		Author:      s.pluginInfo.Author,
-		Name:        s.pluginInfo.Name,
-		Website:     s.pluginInfo.Website,
-		Description: s.pluginInfo.Description,
-		License:     s.pluginInfo.License,
-		ModulePath:  s.pluginInfo.ModulePath,
+		Version:     s.shim.pluginInfo.Version,
+		Author:      s.shim.pluginInfo.Author,
+		Name:        s.shim.pluginInfo.Name,
+		Website:     s.shim.pluginInfo.Website,
+		Description: s.shim.pluginInfo.Description,
+		License:     s.shim.pluginInfo.License,
+		ModulePath:  s.shim.pluginInfo.ModulePath,
 	}, nil
 }
 
@@ -122,13 +126,10 @@ func (h *shimV1StorageHandler) Load() (b []byte, err error) {
 	return
 }
 
-func (s *CompatV1Shim) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
-	if req.User.Id > math.MaxUint {
-		return nil, errors.New("user id is too large")
-	}
-	s.mu.RLock()
-	instance, ok := s.instances[uint64(req.User.Id)]
-	s.mu.RUnlock()
+func (s *compatV1ShimServer) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
+	s.shim.mu.RLock()
+	instance, ok := s.shim.instances[req.User.Id]
+	s.shim.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("instance not found")
 	}
@@ -139,13 +140,10 @@ func (s *CompatV1Shim) SetEnable(ctx context.Context, req *protobuf.SetEnableReq
 	}
 }
 
-func (s *CompatV1Shim) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
-	if req.User.Id > math.MaxUint {
-		return nil, errors.New("user id is too large")
-	}
-	s.mu.RLock()
-	instance, ok := s.instances[uint64(req.User.Id)]
-	s.mu.RUnlock()
+func (s *compatV1ShimServer) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
+	s.shim.mu.RLock()
+	instance, ok := s.shim.instances[req.User.Id]
+	s.shim.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("instance not found")
 	}
@@ -161,13 +159,10 @@ func (s *CompatV1Shim) Display(ctx context.Context, req *protobuf.DisplayRequest
 	return nil, errors.New("instance does not implement displayer")
 }
 
-func (s *CompatV1Shim) DefaultConfig(ctx context.Context, req *protobuf.DefaultConfigRequest) (*protobuf.Config, error) {
-	if req.User.Id > math.MaxUint {
-		return nil, errors.New("user id is too large")
-	}
-	s.mu.RLock()
-	instance, ok := s.instances[uint64(req.User.Id)]
-	s.mu.RUnlock()
+func (s *compatV1ShimServer) DefaultConfig(ctx context.Context, req *protobuf.DefaultConfigRequest) (*protobuf.Config, error) {
+	s.shim.mu.RLock()
+	instance, ok := s.shim.instances[req.User.Id]
+	s.shim.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("instance not found")
 	}
@@ -184,13 +179,10 @@ func (s *CompatV1Shim) DefaultConfig(ctx context.Context, req *protobuf.DefaultC
 	return nil, errors.New("instance does not implement configurer")
 }
 
-func (s *CompatV1Shim) ValidateAndSetConfig(ctx context.Context, req *protobuf.ValidateAndSetConfigRequest) (*protobuf.ValidateAndSetConfigResponse, error) {
-	if req.User.Id > math.MaxUint {
-		return nil, errors.New("user id is too large")
-	}
-	s.mu.RLock()
-	instance, ok := s.instances[uint64(req.User.Id)]
-	s.mu.RUnlock()
+func (s *compatV1ShimServer) ValidateAndSetConfig(ctx context.Context, req *protobuf.ValidateAndSetConfigRequest) (*protobuf.ValidateAndSetConfigResponse, error) {
+	s.shim.mu.RLock()
+	instance, ok := s.shim.instances[req.User.Id]
+	s.shim.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("instance not found")
 	}
@@ -217,11 +209,11 @@ func (s *CompatV1Shim) ValidateAndSetConfig(ctx context.Context, req *protobuf.V
 	return nil, errors.New("instance does not implement configurer")
 }
 
-func (s *CompatV1Shim) RunUserInstance(req *protobuf.UserInstanceRequest, stream protobuf.Plugin_RunUserInstanceServer) error {
+func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, stream protobuf.Plugin_RunUserInstanceServer) error {
 	if req.User.Id > math.MaxUint {
 		return errors.New("user id is too large")
 	}
-	instance, err := s.compatV1.GetInstance(&papiv1.UserContext{
+	instance, err := s.shim.compatV1.GetInstance(&papiv1.UserContext{
 		ID:    uint(req.User.Id),
 		Name:  req.User.Name,
 		Admin: req.User.Admin,
@@ -284,14 +276,14 @@ func (s *CompatV1Shim) RunUserInstance(req *protobuf.UserInstanceRequest, stream
 
 	if webhooker, ok := instance.(papiv1.Webhooker); ok {
 		if req.WebhookBasePath != nil {
-			group := s.gin.Group(*req.WebhookBasePath)
+			group := s.shim.gin.Group(*req.WebhookBasePath)
 			webhooker.RegisterWebhook(*req.WebhookBasePath, group)
 		}
 	}
 
-	s.mu.Lock()
-	s.instances[uint64(req.User.Id)] = instance
-	s.mu.Unlock()
+	s.shim.mu.Lock()
+	s.shim.instances[req.User.Id] = instance
+	s.shim.mu.Unlock()
 
 	return nil
 }
@@ -346,9 +338,13 @@ func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error) {
 		pluginInfo:   pluginInfo,
 	}
 
-	protobuf.RegisterPluginServer(rpcServer, self)
-	protobuf.RegisterDisplayerServer(rpcServer, self)
-	protobuf.RegisterConfigurerServer(rpcServer, self)
+	selfServer := &compatV1ShimServer{
+		shim: self,
+	}
+
+	protobuf.RegisterPluginServer(rpcServer, selfServer)
+	protobuf.RegisterDisplayerServer(rpcServer, selfServer)
+	protobuf.RegisterConfigurerServer(rpcServer, selfServer)
 
 	protocols := new(http.Protocols)
 	protocols.SetHTTP1(true)

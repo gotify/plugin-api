@@ -7,14 +7,13 @@ import (
 	"errors"
 	"log"
 	"math"
-	"net"
 	"net/http"
 	"net/url"
+	"plugin"
 	"strings"
 	"sync"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gopkg.in/yaml.v2"
 
@@ -32,19 +31,54 @@ type CompatV1 struct {
 	GetInstance   func(user *papiv1.UserContext) (papiv1.Plugin, error)
 }
 
-type PluginShim struct {
+// NewCompatV1FromPlugin creates a new CompatV1 from a native Go plugin.
+func NewCompatV1FromPlugin(plugin *plugin.Plugin) (*CompatV1, error) {
+	getPluginInfo, err := plugin.Lookup("GetGotifyPluginInfo")
+	if err != nil {
+		return nil, err
+	}
+	getInstance, err := plugin.Lookup("NewGotifyPlugin")
+	if err != nil {
+		return nil, err
+	}
+
+	getPluginInfoChecked, ok := getPluginInfo.(func() *papiv1.Info)
+	if !ok {
+		return nil, errors.New("GetGotifyPluginInfo is not a function")
+	}
+	getInstanceCheckedWithErr, ok := getInstance.(func(user *papiv1.UserContext) (papiv1.Plugin, error))
+	if !ok {
+		if getInstanceCheckedWithoutErr, ok := getInstance.(func(user *papiv1.UserContext) papiv1.Plugin); ok {
+			getInstanceCheckedWithErr = func(user *papiv1.UserContext) (papiv1.Plugin, error) {
+				return getInstanceCheckedWithoutErr(user), nil
+			}
+		} else {
+			return nil, errors.New("NewGotifyPlugin is not a function")
+		}
+	}
+
+	return &CompatV1{
+		GetPluginInfo: getPluginInfoChecked,
+		GetInstance:   getInstanceCheckedWithErr,
+	}, nil
+}
+
+// CompatV1Shim is a shim that acts like a plugin server and delegates request to
+// something that implements a V1-style API interface.
+type CompatV1Shim struct {
 	mu           *sync.RWMutex
 	compatV1     *CompatV1
 	gin          *gin.Engine
 	instances    map[uint64]papiv1.Plugin
 	pluginServer *grpc.Server
 	pluginInfo   *papiv1.Info
+	http.Server
 	protobuf.UnimplementedPluginServer
 	protobuf.UnimplementedDisplayerServer
 	protobuf.UnimplementedConfigurerServer
 }
 
-func (s *PluginShim) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+func (s *CompatV1Shim) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
 	return &protobuf.Info{
 		Version:     s.pluginInfo.Version,
 		Author:      s.pluginInfo.Author,
@@ -88,7 +122,7 @@ func (h *shimV1StorageHandler) Load() (b []byte, err error) {
 	return
 }
 
-func (s *PluginShim) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
+func (s *CompatV1Shim) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
 	if req.User.Id > math.MaxUint {
 		return nil, errors.New("user id is too large")
 	}
@@ -105,7 +139,7 @@ func (s *PluginShim) SetEnable(ctx context.Context, req *protobuf.SetEnableReque
 	}
 }
 
-func (s *PluginShim) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
+func (s *CompatV1Shim) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
 	if req.User.Id > math.MaxUint {
 		return nil, errors.New("user id is too large")
 	}
@@ -127,7 +161,7 @@ func (s *PluginShim) Display(ctx context.Context, req *protobuf.DisplayRequest) 
 	return nil, errors.New("instance does not implement displayer")
 }
 
-func (s *PluginShim) DefaultConfig(ctx context.Context, req *protobuf.DefaultConfigRequest) (*protobuf.Config, error) {
+func (s *CompatV1Shim) DefaultConfig(ctx context.Context, req *protobuf.DefaultConfigRequest) (*protobuf.Config, error) {
 	if req.User.Id > math.MaxUint {
 		return nil, errors.New("user id is too large")
 	}
@@ -150,7 +184,7 @@ func (s *PluginShim) DefaultConfig(ctx context.Context, req *protobuf.DefaultCon
 	return nil, errors.New("instance does not implement configurer")
 }
 
-func (s *PluginShim) ValidateAndSetConfig(ctx context.Context, req *protobuf.ValidateAndSetConfigRequest) (*protobuf.ValidateAndSetConfigResponse, error) {
+func (s *CompatV1Shim) ValidateAndSetConfig(ctx context.Context, req *protobuf.ValidateAndSetConfigRequest) (*protobuf.ValidateAndSetConfigResponse, error) {
 	if req.User.Id > math.MaxUint {
 		return nil, errors.New("user id is too large")
 	}
@@ -183,7 +217,7 @@ func (s *PluginShim) ValidateAndSetConfig(ctx context.Context, req *protobuf.Val
 	return nil, errors.New("instance does not implement configurer")
 }
 
-func (s *PluginShim) RunUserInstance(req *protobuf.UserInstanceRequest, stream protobuf.Plugin_RunUserInstanceServer) error {
+func (s *CompatV1Shim) RunUserInstance(req *protobuf.UserInstanceRequest, stream protobuf.Plugin_RunUserInstanceServer) error {
 	if req.User.Id > math.MaxUint {
 		return errors.New("user id is too large")
 	}
@@ -262,7 +296,7 @@ func (s *PluginShim) RunUserInstance(req *protobuf.UserInstanceRequest, stream p
 	return nil
 }
 
-func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*PluginShim, error) {
+func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error) {
 	pluginInfo := compatV1.GetPluginInfo()
 	tlsName := BuildPluginTLSName(purposePluginRPC, pluginInfo.Name)
 
@@ -296,19 +330,14 @@ func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*PluginShim, error) {
 		RootCAs:    rootCAs,
 		ServerName: tlsName,
 		ClientAuth: tls.RequireAndVerifyClientCert,
-		VerifyConnection: func(state tls.ConnectionState) error {
-			if state.ServerName != ServerTLSName {
-				return errors.New("not implemented: client must be the gotify server itself for now")
-			}
-			return nil
-		},
+		ClientCAs:  rootCAs,
 	}
 
-	rpcServer := grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsConfig)))
+	rpcServer := grpc.NewServer()
 
 	gin := gin.Default()
 
-	self := &PluginShim{
+	self := &CompatV1Shim{
 		mu:           &sync.RWMutex{},
 		instances:    make(map[uint64]papiv1.Plugin),
 		compatV1:     compatV1,
@@ -321,10 +350,19 @@ func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*PluginShim, error) {
 	protobuf.RegisterDisplayerServer(rpcServer, self)
 	protobuf.RegisterConfigurerServer(rpcServer, self)
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(true)
+	self.Server = http.Server{
+		Handler:   self,
+		TLSConfig: tlsConfig,
+		Protocols: protocols,
+	}
+
 	return self, nil
 }
 
-func (h *PluginShim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.TLS == nil {
 		http.Error(w, "Must use TLS", http.StatusUpgradeRequired)
 		return
@@ -353,8 +391,4 @@ func (h *PluginShim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Virtual host not found", http.StatusNotFound)
-}
-
-func (h *PluginShim) Serve(listener net.Listener) error {
-	return h.pluginServer.Serve(listener)
 }

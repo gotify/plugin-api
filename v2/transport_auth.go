@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	purposePluginRPC     = "rpc.plugin"
-	purposePluginWebhook = "webhook.plugin"
+	purposePluginRPC     = "rpc"
+	purposePluginWebhook = "webhook"
 )
 
 const ServerTLSName = "server.gotify.home.arpa"
@@ -26,7 +26,7 @@ func BuildPluginTLSName(purpose string, moduleName string) string {
 		moduleNameParts[i] = hex.EncodeToString([]byte(moduleNameParts[i]))
 	}
 	slices.Reverse(moduleNameParts)
-	return fmt.Sprintf("%s.%s.plugins.gotify.home.arpa", strings.Join(moduleNameParts, "."), purpose)
+	return fmt.Sprintf("%s.%s.plugin.gotify.home.arpa", purpose, strings.Join(moduleNameParts, "."))
 }
 
 type EphemeralTLSClient struct {

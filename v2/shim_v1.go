@@ -89,6 +89,9 @@ func (h *shimV1StorageHandler) Load() (b []byte, err error) {
 }
 
 func (s *PluginShim) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
+	if req.User.Id > math.MaxUint {
+		return nil, errors.New("user id is too large")
+	}
 	s.mu.RLock()
 	instance, ok := s.instances[uint64(req.User.Id)]
 	s.mu.RUnlock()
@@ -103,6 +106,9 @@ func (s *PluginShim) SetEnable(ctx context.Context, req *protobuf.SetEnableReque
 }
 
 func (s *PluginShim) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
+	if req.User.Id > math.MaxUint {
+		return nil, errors.New("user id is too large")
+	}
 	s.mu.RLock()
 	instance, ok := s.instances[uint64(req.User.Id)]
 	s.mu.RUnlock()
@@ -122,6 +128,9 @@ func (s *PluginShim) Display(ctx context.Context, req *protobuf.DisplayRequest) 
 }
 
 func (s *PluginShim) DefaultConfig(ctx context.Context, req *protobuf.DefaultConfigRequest) (*protobuf.Config, error) {
+	if req.User.Id > math.MaxUint {
+		return nil, errors.New("user id is too large")
+	}
 	s.mu.RLock()
 	instance, ok := s.instances[uint64(req.User.Id)]
 	s.mu.RUnlock()
@@ -142,6 +151,9 @@ func (s *PluginShim) DefaultConfig(ctx context.Context, req *protobuf.DefaultCon
 }
 
 func (s *PluginShim) ValidateAndSetConfig(ctx context.Context, req *protobuf.ValidateAndSetConfigRequest) (*protobuf.ValidateAndSetConfigResponse, error) {
+	if req.User.Id > math.MaxUint {
+		return nil, errors.New("user id is too large")
+	}
 	s.mu.RLock()
 	instance, ok := s.instances[uint64(req.User.Id)]
 	s.mu.RUnlock()

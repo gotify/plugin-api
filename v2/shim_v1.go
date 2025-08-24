@@ -26,6 +26,8 @@ type GrpcDialer interface {
 	Dial(ctx context.Context) (*grpc.ClientConn, error)
 }
 
+// CompatV1 is a shim that acts like a plugin server and delegates request to
+// something that implements a V1-style API interface.
 type CompatV1 struct {
 	GetPluginInfo func() *papiv1.Info
 	GetInstance   func(user *papiv1.UserContext) (papiv1.Plugin, error)
@@ -75,23 +77,106 @@ type CompatV1Shim struct {
 	http.Server
 }
 
-type compatV1ShimServer struct {
-	shim *CompatV1Shim
-	protobuf.UnimplementedPluginServer
-	protobuf.UnimplementedDisplayerServer
-	protobuf.UnimplementedConfigurerServer
+// NewCompatV1Rpc creates a new CompatV1Shim server.
+func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error) {
+	pluginInfo := compatV1.GetPluginInfo()
+	tlsName := BuildPluginTLSName(purposePluginRPC, pluginInfo.Name)
+
+	cliFlags, err := ParsePluginCLIFlags(cliArgs)
+	if err != nil {
+		log.Fatalf("Failed to parse CLI flags: %v", err)
+	}
+	rootCAs := x509.NewCertPool()
+	caCert, err := x509.ParseCertificate(cliFlags.CAData)
+	if err != nil {
+		return nil, err
+	}
+	rootCAs.AddCert(caCert)
+
+	leafCert, err := x509.ParseCertificate(cliFlags.CertData)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{
+			{
+				Certificate: [][]byte{cliFlags.CertData},
+				PrivateKey:  cliFlags.KeyData,
+				Leaf:        leafCert,
+			},
+			{
+				Certificate: [][]byte{caCert.Raw},
+			},
+		},
+		RootCAs:    rootCAs,
+		ServerName: tlsName,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  rootCAs,
+	}
+
+	rpcServer := grpc.NewServer()
+
+	gin := gin.Default()
+
+	self := &CompatV1Shim{
+		mu:           &sync.RWMutex{},
+		instances:    make(map[uint64]papiv1.Plugin),
+		compatV1:     compatV1,
+		gin:          gin,
+		pluginServer: rpcServer,
+		pluginInfo:   pluginInfo,
+	}
+
+	selfServer := &compatV1ShimServer{
+		shim: self,
+	}
+
+	protobuf.RegisterPluginServer(rpcServer, selfServer)
+	protobuf.RegisterDisplayerServer(rpcServer, selfServer)
+	protobuf.RegisterConfigurerServer(rpcServer, selfServer)
+
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(true)
+	self.Server = http.Server{
+		Handler:   self,
+		TLSConfig: tlsConfig,
+		Protocols: protocols,
+	}
+
+	return self, nil
 }
 
-func (s *compatV1ShimServer) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
-	return &protobuf.Info{
-		Version:     s.shim.pluginInfo.Version,
-		Author:      s.shim.pluginInfo.Author,
-		Name:        s.shim.pluginInfo.Name,
-		Website:     s.shim.pluginInfo.Website,
-		Description: s.shim.pluginInfo.Description,
-		License:     s.shim.pluginInfo.License,
-		ModulePath:  s.shim.pluginInfo.ModulePath,
-	}, nil
+func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.TLS == nil {
+		http.Error(w, "Must use TLS", http.StatusUpgradeRequired)
+		return
+	}
+
+	pluginRpcHostName := BuildPluginTLSName(purposePluginRPC, h.pluginInfo.ModulePath)
+
+	if r.TLS.ServerName == pluginRpcHostName {
+		if r.ProtoMajor != 2 {
+			http.Error(w, "Must use HTTP/2", http.StatusHTTPVersionNotSupported)
+			return
+		}
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
+			http.Error(w, "Must use application/grpc content type", http.StatusUnsupportedMediaType)
+			return
+		}
+		h.pluginServer.ServeHTTP(w, r)
+
+		return
+	}
+
+	pluginWebhookHostName := BuildPluginTLSName(purposePluginWebhook, h.pluginInfo.ModulePath)
+	if r.TLS.ServerName == pluginWebhookHostName {
+		h.gin.ServeHTTP(w, r)
+		return
+	}
+
+	http.Error(w, "Virtual host not found", http.StatusNotFound)
 }
 
 type shimV1MessageHandler struct {
@@ -124,6 +209,25 @@ func (h *shimV1StorageHandler) Save(b []byte) error {
 func (h *shimV1StorageHandler) Load() (b []byte, err error) {
 	copy(h.currentStorage, b)
 	return
+}
+
+type compatV1ShimServer struct {
+	shim *CompatV1Shim
+	protobuf.UnimplementedPluginServer
+	protobuf.UnimplementedDisplayerServer
+	protobuf.UnimplementedConfigurerServer
+}
+
+func (s *compatV1ShimServer) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
+	return &protobuf.Info{
+		Version:     s.shim.pluginInfo.Version,
+		Author:      s.shim.pluginInfo.Author,
+		Name:        s.shim.pluginInfo.Name,
+		Website:     s.shim.pluginInfo.Website,
+		Description: s.shim.pluginInfo.Description,
+		License:     s.shim.pluginInfo.License,
+		ModulePath:  s.shim.pluginInfo.ModulePath,
+	}, nil
 }
 
 func (s *compatV1ShimServer) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
@@ -286,105 +390,4 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 	s.shim.mu.Unlock()
 
 	return nil
-}
-
-func NewPluginRpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error) {
-	pluginInfo := compatV1.GetPluginInfo()
-	tlsName := BuildPluginTLSName(purposePluginRPC, pluginInfo.Name)
-
-	cliFlags, err := ParsePluginCLIFlags(cliArgs)
-	if err != nil {
-		log.Fatalf("Failed to parse CLI flags: %v", err)
-	}
-	rootCAs := x509.NewCertPool()
-	caCert, err := x509.ParseCertificate(cliFlags.CAData)
-	if err != nil {
-		return nil, err
-	}
-	rootCAs.AddCert(caCert)
-
-	leafCert, err := x509.ParseCertificate(cliFlags.CertData)
-	if err != nil {
-		return nil, err
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{
-			{
-				Certificate: [][]byte{cliFlags.CertData},
-				PrivateKey:  cliFlags.KeyData,
-				Leaf:        leafCert,
-			},
-			{
-				Certificate: [][]byte{caCert.Raw},
-			},
-		},
-		RootCAs:    rootCAs,
-		ServerName: tlsName,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  rootCAs,
-	}
-
-	rpcServer := grpc.NewServer()
-
-	gin := gin.Default()
-
-	self := &CompatV1Shim{
-		mu:           &sync.RWMutex{},
-		instances:    make(map[uint64]papiv1.Plugin),
-		compatV1:     compatV1,
-		gin:          gin,
-		pluginServer: rpcServer,
-		pluginInfo:   pluginInfo,
-	}
-
-	selfServer := &compatV1ShimServer{
-		shim: self,
-	}
-
-	protobuf.RegisterPluginServer(rpcServer, selfServer)
-	protobuf.RegisterDisplayerServer(rpcServer, selfServer)
-	protobuf.RegisterConfigurerServer(rpcServer, selfServer)
-
-	protocols := new(http.Protocols)
-	protocols.SetHTTP1(true)
-	protocols.SetHTTP2(true)
-	self.Server = http.Server{
-		Handler:   self,
-		TLSConfig: tlsConfig,
-		Protocols: protocols,
-	}
-
-	return self, nil
-}
-
-func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.TLS == nil {
-		http.Error(w, "Must use TLS", http.StatusUpgradeRequired)
-		return
-	}
-
-	pluginRpcHostName := BuildPluginTLSName(purposePluginRPC, h.pluginInfo.ModulePath)
-
-	if r.TLS.ServerName == pluginRpcHostName {
-		if r.ProtoMajor != 2 {
-			http.Error(w, "Must use HTTP/2", http.StatusHTTPVersionNotSupported)
-			return
-		}
-		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/grpc") {
-			http.Error(w, "Must use application/grpc content type", http.StatusUnsupportedMediaType)
-			return
-		}
-		h.pluginServer.ServeHTTP(w, r)
-
-		return
-	}
-
-	pluginWebhookHostName := BuildPluginTLSName(purposePluginWebhook, h.pluginInfo.ModulePath)
-	if r.TLS.ServerName == pluginWebhookHostName {
-		h.gin.ServeHTTP(w, r)
-		return
-	}
-
-	http.Error(w, "Virtual host not found", http.StatusNotFound)
 }

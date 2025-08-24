@@ -1,0 +1,16 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+import "meta.proto";
+
+option go_package = "./generated/protobuf";
+
+message ServerEvent {
+    oneof event {
+        UserContext user = 1;
+    }
+}
+
+// An optional RPC service that allows plugins to accept updates from the server.
+service ServerEventReceiver {
+    rpc ServerEvents(stream ServerEvent) returns (google.protobuf.Empty);
+}

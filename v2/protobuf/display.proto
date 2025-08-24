@@ -12,6 +12,7 @@ message DisplayResponse {
     string display = 1;
 }
 
+// A service that allows plugins to display content to the user.
 service Displayer {
     rpc Display(DisplayRequest) returns (DisplayResponse);
 }

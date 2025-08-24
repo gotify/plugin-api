@@ -26,6 +26,8 @@ const (
 // ConfigurerClient is the client API for Configurer service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// A service that allows plugins to be configured through the Gotify server.
 type ConfigurerClient interface {
 	DefaultConfig(ctx context.Context, in *DefaultConfigRequest, opts ...grpc.CallOption) (*Config, error)
 	ValidateAndSetConfig(ctx context.Context, in *ValidateAndSetConfigRequest, opts ...grpc.CallOption) (*ValidateAndSetConfigResponse, error)
@@ -62,6 +64,8 @@ func (c *configurerClient) ValidateAndSetConfig(ctx context.Context, in *Validat
 // ConfigurerServer is the server API for Configurer service.
 // All implementations must embed UnimplementedConfigurerServer
 // for forward compatibility.
+//
+// A service that allows plugins to be configured through the Gotify server.
 type ConfigurerServer interface {
 	DefaultConfig(context.Context, *DefaultConfigRequest) (*Config, error)
 	ValidateAndSetConfig(context.Context, *ValidateAndSetConfigRequest) (*ValidateAndSetConfigResponse, error)

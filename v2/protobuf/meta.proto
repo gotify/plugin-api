@@ -93,6 +93,8 @@ message UserInstanceRequest {
     optional bytes storage = 5;
 }
 
+// The base plugin service, which includes a plugin metadata endpoint, a per-user master switch,
+// and a user instance stream.
 service Plugin {
     // get the plugin info
     rpc GetPluginInfo(google.protobuf.Empty) returns (Info);
@@ -100,9 +102,6 @@ service Plugin {
     // set the enable state of a plugin instance
     rpc SetEnable(SetEnableRequest) returns (google.protobuf.Empty);
     
-    // updates to user information
-    rpc UserUpdates(stream UserContext) returns (google.protobuf.Empty);
-
     // run a user instance
     rpc RunUserInstance(UserInstanceRequest) returns (stream InstanceUpdate);
 }

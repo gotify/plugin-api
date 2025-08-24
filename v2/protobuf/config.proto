@@ -25,6 +25,7 @@ message ValidateAndSetConfigResponse {
     }
 }
 
+// A service that allows plugins to be configured through the Gotify server.
 service Configurer {
     rpc DefaultConfig(DefaultConfigRequest) returns (Config);
     rpc ValidateAndSetConfig(ValidateAndSetConfigRequest) returns (ValidateAndSetConfigResponse);

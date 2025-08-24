@@ -25,6 +25,8 @@ const (
 // DisplayerClient is the client API for Displayer service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// A service that allows plugins to display content to the user.
 type DisplayerClient interface {
 	Display(ctx context.Context, in *DisplayRequest, opts ...grpc.CallOption) (*DisplayResponse, error)
 }
@@ -50,6 +52,8 @@ func (c *displayerClient) Display(ctx context.Context, in *DisplayRequest, opts 
 // DisplayerServer is the server API for Displayer service.
 // All implementations must embed UnimplementedDisplayerServer
 // for forward compatibility.
+//
+// A service that allows plugins to display content to the user.
 type DisplayerServer interface {
 	Display(context.Context, *DisplayRequest) (*DisplayResponse, error)
 	mustEmbedUnimplementedDisplayerServer()

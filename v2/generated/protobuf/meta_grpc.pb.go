@@ -22,20 +22,20 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Plugin_GetPluginInfo_FullMethodName   = "/Plugin/GetPluginInfo"
 	Plugin_SetEnable_FullMethodName       = "/Plugin/SetEnable"
-	Plugin_UserUpdates_FullMethodName     = "/Plugin/UserUpdates"
 	Plugin_RunUserInstance_FullMethodName = "/Plugin/RunUserInstance"
 )
 
 // PluginClient is the client API for Plugin service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// The base plugin service, which includes a plugin metadata endpoint, a per-user master switch,
+// and a user instance stream.
 type PluginClient interface {
 	// get the plugin info
 	GetPluginInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
 	// set the enable state of a plugin instance
 	SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// updates to user information
-	UserUpdates(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UserContext, emptypb.Empty], error)
 	// run a user instance
 	RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InstanceUpdate], error)
 }
@@ -68,22 +68,9 @@ func (c *pluginClient) SetEnable(ctx context.Context, in *SetEnableRequest, opts
 	return out, nil
 }
 
-func (c *pluginClient) UserUpdates(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UserContext, emptypb.Empty], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[0], Plugin_UserUpdates_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[UserContext, emptypb.Empty]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Plugin_UserUpdatesClient = grpc.ClientStreamingClient[UserContext, emptypb.Empty]
-
 func (c *pluginClient) RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InstanceUpdate], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[1], Plugin_RunUserInstance_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[0], Plugin_RunUserInstance_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +90,14 @@ type Plugin_RunUserInstanceClient = grpc.ServerStreamingClient[InstanceUpdate]
 // PluginServer is the server API for Plugin service.
 // All implementations must embed UnimplementedPluginServer
 // for forward compatibility.
+//
+// The base plugin service, which includes a plugin metadata endpoint, a per-user master switch,
+// and a user instance stream.
 type PluginServer interface {
 	// get the plugin info
 	GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error)
 	// set the enable state of a plugin instance
 	SetEnable(context.Context, *SetEnableRequest) (*emptypb.Empty, error)
-	// updates to user information
-	UserUpdates(grpc.ClientStreamingServer[UserContext, emptypb.Empty]) error
 	// run a user instance
 	RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[InstanceUpdate]) error
 	mustEmbedUnimplementedPluginServer()
@@ -127,9 +115,6 @@ func (UnimplementedPluginServer) GetPluginInfo(context.Context, *emptypb.Empty) 
 }
 func (UnimplementedPluginServer) SetEnable(context.Context, *SetEnableRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetEnable not implemented")
-}
-func (UnimplementedPluginServer) UserUpdates(grpc.ClientStreamingServer[UserContext, emptypb.Empty]) error {
-	return status.Errorf(codes.Unimplemented, "method UserUpdates not implemented")
 }
 func (UnimplementedPluginServer) RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[InstanceUpdate]) error {
 	return status.Errorf(codes.Unimplemented, "method RunUserInstance not implemented")
@@ -191,13 +176,6 @@ func _Plugin_SetEnable_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Plugin_UserUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(PluginServer).UserUpdates(&grpc.GenericServerStream[UserContext, emptypb.Empty]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Plugin_UserUpdatesServer = grpc.ClientStreamingServer[UserContext, emptypb.Empty]
-
 func _Plugin_RunUserInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(UserInstanceRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -226,11 +204,6 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "UserUpdates",
-			Handler:       _Plugin_UserUpdates_Handler,
-			ClientStreams: true,
-		},
 		{
 			StreamName:    "RunUserInstance",
 			Handler:       _Plugin_RunUserInstance_Handler,

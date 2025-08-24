@@ -57,20 +57,53 @@ message SetEnableRequest {
     bool enable = 2;
 }
 
-message UserUpdate {
+enum Capability {
+    DISPLAYER = 0;
+    MESSENGER = 1;
+    CONFIGURER = 2;
+    STORAGER = 3;
+    WEBHOOKER = 4;
+}
+
+message PluginCapabilities {
+    repeated Capability capabilities = 1;
+}
+
+message InstanceUpdate {
     oneof update {
-        Message message = 1;
-        string config = 2;
+        // which capabilities are displayed to the user
+        PluginCapabilities capabilities = 1;
+        // send a message to the user
+        Message message = 2;
+        // update persistent storage
+        bytes storage = 3;
     }
 }
 
 message UserInstanceRequest {
+    // the server version info
     ServerVersionInfo serverVersion = 1;
+    // the user context
     UserContext user = 2;
+    // the webhook base path
+    optional string webhookBasePath = 3;
+    // the config
+    optional bytes config = 4;
+    // the storage
+    optional bytes storage = 5;
 }
 
 service Plugin {
+    // get the plugin info
     rpc GetPluginInfo(google.protobuf.Empty) returns (Info);
-    rpc RunUserInstance(UserInstanceRequest) returns (stream UserUpdate);
+
+    // set the enable state of a plugin instance
+    rpc SetEnable(SetEnableRequest) returns (google.protobuf.Empty);
+    
+    // updates to user information
+    rpc UserUpdates(stream UserContext) returns (google.protobuf.Empty);
+
+    // run a user instance
+    rpc RunUserInstance(UserInstanceRequest) returns (stream InstanceUpdate);
 }
 

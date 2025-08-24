@@ -9,6 +9,7 @@ package protobuf
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -161,42 +162,6 @@ func (x *ValidateAndSetConfigRequest) GetConfig() *Config {
 	return nil
 }
 
-type ValidateAndSetConfigSuccessResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ValidateAndSetConfigSuccessResponse) Reset() {
-	*x = ValidateAndSetConfigSuccessResponse{}
-	mi := &file_config_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ValidateAndSetConfigSuccessResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ValidateAndSetConfigSuccessResponse) ProtoMessage() {}
-
-func (x *ValidateAndSetConfigSuccessResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ValidateAndSetConfigSuccessResponse.ProtoReflect.Descriptor instead.
-func (*ValidateAndSetConfigSuccessResponse) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{3}
-}
-
 type ValidateAndSetConfigResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Response:
@@ -210,7 +175,7 @@ type ValidateAndSetConfigResponse struct {
 
 func (x *ValidateAndSetConfigResponse) Reset() {
 	*x = ValidateAndSetConfigResponse{}
-	mi := &file_config_proto_msgTypes[4]
+	mi := &file_config_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -222,7 +187,7 @@ func (x *ValidateAndSetConfigResponse) String() string {
 func (*ValidateAndSetConfigResponse) ProtoMessage() {}
 
 func (x *ValidateAndSetConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_config_proto_msgTypes[4]
+	mi := &file_config_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -235,7 +200,7 @@ func (x *ValidateAndSetConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateAndSetConfigResponse.ProtoReflect.Descriptor instead.
 func (*ValidateAndSetConfigResponse) Descriptor() ([]byte, []int) {
-	return file_config_proto_rawDescGZIP(), []int{4}
+	return file_config_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ValidateAndSetConfigResponse) GetResponse() isValidateAndSetConfigResponse_Response {
@@ -245,7 +210,7 @@ func (x *ValidateAndSetConfigResponse) GetResponse() isValidateAndSetConfigRespo
 	return nil
 }
 
-func (x *ValidateAndSetConfigResponse) GetSuccess() *ValidateAndSetConfigSuccessResponse {
+func (x *ValidateAndSetConfigResponse) GetSuccess() *emptypb.Empty {
 	if x != nil {
 		if x, ok := x.Response.(*ValidateAndSetConfigResponse_Success); ok {
 			return x.Success
@@ -268,7 +233,7 @@ type isValidateAndSetConfigResponse_Response interface {
 }
 
 type ValidateAndSetConfigResponse_Success struct {
-	Success *ValidateAndSetConfigSuccessResponse `protobuf:"bytes,1,opt,name=success,proto3,oneof"`
+	Success *emptypb.Empty `protobuf:"bytes,1,opt,name=success,proto3,oneof"`
 }
 
 type ValidateAndSetConfigResponse_Error struct {
@@ -283,7 +248,7 @@ var File_config_proto protoreflect.FileDescriptor
 
 const file_config_proto_rawDesc = "" +
 	"\n" +
-	"\fconfig.proto\x1a\n" +
+	"\fconfig.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\n" +
 	"meta.proto\" \n" +
 	"\x06Config\x12\x16\n" +
 	"\x06config\x18\x01 \x01(\tR\x06config\"8\n" +
@@ -291,10 +256,9 @@ const file_config_proto_rawDesc = "" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\"`\n" +
 	"\x1bValidateAndSetConfigRequest\x12 \n" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x1f\n" +
-	"\x06config\x18\x02 \x01(\v2\a.ConfigR\x06config\"%\n" +
-	"#ValidateAndSetConfigSuccessResponse\"\x8c\x01\n" +
-	"\x1cValidateAndSetConfigResponse\x12@\n" +
-	"\asuccess\x18\x01 \x01(\v2$.ValidateAndSetConfigSuccessResponseH\x00R\asuccess\x12\x1e\n" +
+	"\x06config\x18\x02 \x01(\v2\a.ConfigR\x06config\"~\n" +
+	"\x1cValidateAndSetConfigResponse\x122\n" +
+	"\asuccess\x18\x01 \x01(\v2\x16.google.protobuf.EmptyH\x00R\asuccess\x12\x1e\n" +
 	"\x05error\x18\x02 \x01(\v2\x06.ErrorH\x00R\x05errorB\n" +
 	"\n" +
 	"\bresponse2\x92\x01\n" +
@@ -315,26 +279,26 @@ func file_config_proto_rawDescGZIP() []byte {
 	return file_config_proto_rawDescData
 }
 
-var file_config_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_config_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_config_proto_goTypes = []any{
-	(*Config)(nil),                              // 0: Config
-	(*DefaultConfigRequest)(nil),                // 1: DefaultConfigRequest
-	(*ValidateAndSetConfigRequest)(nil),         // 2: ValidateAndSetConfigRequest
-	(*ValidateAndSetConfigSuccessResponse)(nil), // 3: ValidateAndSetConfigSuccessResponse
-	(*ValidateAndSetConfigResponse)(nil),        // 4: ValidateAndSetConfigResponse
-	(*UserContext)(nil),                         // 5: UserContext
-	(*Error)(nil),                               // 6: Error
+	(*Config)(nil),                       // 0: Config
+	(*DefaultConfigRequest)(nil),         // 1: DefaultConfigRequest
+	(*ValidateAndSetConfigRequest)(nil),  // 2: ValidateAndSetConfigRequest
+	(*ValidateAndSetConfigResponse)(nil), // 3: ValidateAndSetConfigResponse
+	(*UserContext)(nil),                  // 4: UserContext
+	(*emptypb.Empty)(nil),                // 5: google.protobuf.Empty
+	(*Error)(nil),                        // 6: Error
 }
 var file_config_proto_depIdxs = []int32{
-	5, // 0: DefaultConfigRequest.user:type_name -> UserContext
-	5, // 1: ValidateAndSetConfigRequest.user:type_name -> UserContext
+	4, // 0: DefaultConfigRequest.user:type_name -> UserContext
+	4, // 1: ValidateAndSetConfigRequest.user:type_name -> UserContext
 	0, // 2: ValidateAndSetConfigRequest.config:type_name -> Config
-	3, // 3: ValidateAndSetConfigResponse.success:type_name -> ValidateAndSetConfigSuccessResponse
+	5, // 3: ValidateAndSetConfigResponse.success:type_name -> google.protobuf.Empty
 	6, // 4: ValidateAndSetConfigResponse.error:type_name -> Error
 	1, // 5: Configurer.DefaultConfig:input_type -> DefaultConfigRequest
 	2, // 6: Configurer.ValidateAndSetConfig:input_type -> ValidateAndSetConfigRequest
 	0, // 7: Configurer.DefaultConfig:output_type -> Config
-	4, // 8: Configurer.ValidateAndSetConfig:output_type -> ValidateAndSetConfigResponse
+	3, // 8: Configurer.ValidateAndSetConfig:output_type -> ValidateAndSetConfigResponse
 	7, // [7:9] is the sub-list for method output_type
 	5, // [5:7] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -348,7 +312,7 @@ func file_config_proto_init() {
 		return
 	}
 	file_meta_proto_init()
-	file_config_proto_msgTypes[4].OneofWrappers = []any{
+	file_config_proto_msgTypes[3].OneofWrappers = []any{
 		(*ValidateAndSetConfigResponse_Success)(nil),
 		(*ValidateAndSetConfigResponse_Error)(nil),
 	}
@@ -358,7 +322,7 @@ func file_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_config_proto_rawDesc), len(file_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

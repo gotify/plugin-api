@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Plugin_GetPluginInfo_FullMethodName   = "/Plugin/GetPluginInfo"
+	Plugin_SetEnable_FullMethodName       = "/Plugin/SetEnable"
+	Plugin_UserUpdates_FullMethodName     = "/Plugin/UserUpdates"
 	Plugin_RunUserInstance_FullMethodName = "/Plugin/RunUserInstance"
 )
 
@@ -28,8 +30,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PluginClient interface {
+	// get the plugin info
 	GetPluginInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
-	RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UserUpdate], error)
+	// set the enable state of a plugin instance
+	SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// updates to user information
+	UserUpdates(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UserContext, emptypb.Empty], error)
+	// run a user instance
+	RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InstanceUpdate], error)
 }
 
 type pluginClient struct {
@@ -50,13 +58,36 @@ func (c *pluginClient) GetPluginInfo(ctx context.Context, in *emptypb.Empty, opt
 	return out, nil
 }
 
-func (c *pluginClient) RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[UserUpdate], error) {
+func (c *pluginClient) SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[0], Plugin_RunUserInstance_FullMethodName, cOpts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Plugin_SetEnable_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[UserInstanceRequest, UserUpdate]{ClientStream: stream}
+	return out, nil
+}
+
+func (c *pluginClient) UserUpdates(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[UserContext, emptypb.Empty], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[0], Plugin_UserUpdates_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[UserContext, emptypb.Empty]{ClientStream: stream}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Plugin_UserUpdatesClient = grpc.ClientStreamingClient[UserContext, emptypb.Empty]
+
+func (c *pluginClient) RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InstanceUpdate], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &Plugin_ServiceDesc.Streams[1], Plugin_RunUserInstance_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[UserInstanceRequest, InstanceUpdate]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -67,14 +98,20 @@ func (c *pluginClient) RunUserInstance(ctx context.Context, in *UserInstanceRequ
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Plugin_RunUserInstanceClient = grpc.ServerStreamingClient[UserUpdate]
+type Plugin_RunUserInstanceClient = grpc.ServerStreamingClient[InstanceUpdate]
 
 // PluginServer is the server API for Plugin service.
 // All implementations must embed UnimplementedPluginServer
 // for forward compatibility.
 type PluginServer interface {
+	// get the plugin info
 	GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error)
-	RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[UserUpdate]) error
+	// set the enable state of a plugin instance
+	SetEnable(context.Context, *SetEnableRequest) (*emptypb.Empty, error)
+	// updates to user information
+	UserUpdates(grpc.ClientStreamingServer[UserContext, emptypb.Empty]) error
+	// run a user instance
+	RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[InstanceUpdate]) error
 	mustEmbedUnimplementedPluginServer()
 }
 
@@ -88,7 +125,13 @@ type UnimplementedPluginServer struct{}
 func (UnimplementedPluginServer) GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPluginInfo not implemented")
 }
-func (UnimplementedPluginServer) RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[UserUpdate]) error {
+func (UnimplementedPluginServer) SetEnable(context.Context, *SetEnableRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetEnable not implemented")
+}
+func (UnimplementedPluginServer) UserUpdates(grpc.ClientStreamingServer[UserContext, emptypb.Empty]) error {
+	return status.Errorf(codes.Unimplemented, "method UserUpdates not implemented")
+}
+func (UnimplementedPluginServer) RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[InstanceUpdate]) error {
 	return status.Errorf(codes.Unimplemented, "method RunUserInstance not implemented")
 }
 func (UnimplementedPluginServer) mustEmbedUnimplementedPluginServer() {}
@@ -130,16 +173,41 @@ func _Plugin_GetPluginInfo_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Plugin_SetEnable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetEnableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PluginServer).SetEnable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Plugin_SetEnable_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PluginServer).SetEnable(ctx, req.(*SetEnableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Plugin_UserUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(PluginServer).UserUpdates(&grpc.GenericServerStream[UserContext, emptypb.Empty]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Plugin_UserUpdatesServer = grpc.ClientStreamingServer[UserContext, emptypb.Empty]
+
 func _Plugin_RunUserInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(UserInstanceRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(PluginServer).RunUserInstance(m, &grpc.GenericServerStream[UserInstanceRequest, UserUpdate]{ServerStream: stream})
+	return srv.(PluginServer).RunUserInstance(m, &grpc.GenericServerStream[UserInstanceRequest, InstanceUpdate]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Plugin_RunUserInstanceServer = grpc.ServerStreamingServer[UserUpdate]
+type Plugin_RunUserInstanceServer = grpc.ServerStreamingServer[InstanceUpdate]
 
 // Plugin_ServiceDesc is the grpc.ServiceDesc for Plugin service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -152,8 +220,17 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetPluginInfo",
 			Handler:    _Plugin_GetPluginInfo_Handler,
 		},
+		{
+			MethodName: "SetEnable",
+			Handler:    _Plugin_SetEnable_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "UserUpdates",
+			Handler:       _Plugin_UserUpdates_Handler,
+			ClientStreams: true,
+		},
 		{
 			StreamName:    "RunUserInstance",
 			Handler:       _Plugin_RunUserInstance_Handler,

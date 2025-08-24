@@ -1,4 +1,6 @@
 syntax = "proto3";
+
+import "google/protobuf/empty.proto";
 import "meta.proto";
 
 option go_package = "./generated/protobuf";
@@ -16,13 +18,9 @@ message ValidateAndSetConfigRequest {
     Config config = 2;
 }
 
-message ValidateAndSetConfigSuccessResponse {
-
-}
-
 message ValidateAndSetConfigResponse {
     oneof response {
-        ValidateAndSetConfigSuccessResponse success = 1;
+        google.protobuf.Empty success = 1;
         Error error = 2;
     }
 }

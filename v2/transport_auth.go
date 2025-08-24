@@ -3,21 +3,25 @@ package plugin
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 )
 
-const ServerTLSName = "gotify.home.arpa"
+const ServerTLSName = "server.gotify.home.arpa"
 
 func BuildPluginTLSName(moduleName string) string {
-	moduleNameHash := sha256.Sum256([]byte(moduleName))
-	hashHex := hex.EncodeToString(moduleNameHash[:])
-	return fmt.Sprintf("%s.plugins.gotify.home.arpa", hashHex)
+	moduleNameParts := strings.Split(moduleName, "/")
+	for i := range moduleNameParts {
+		moduleNameParts[i] = hex.EncodeToString([]byte(moduleNameParts[i]))
+	}
+	slices.Reverse(moduleNameParts)
+	return fmt.Sprintf("%s.plugins.gotify.home.arpa", strings.Join(moduleNameParts, "."))
 }
 
 type EphemeralTLSClient struct {

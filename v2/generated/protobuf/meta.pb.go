@@ -23,6 +23,61 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type Capability int32
+
+const (
+	Capability_DISPLAYER  Capability = 0
+	Capability_MESSENGER  Capability = 1
+	Capability_CONFIGURER Capability = 2
+	Capability_STORAGER   Capability = 3
+	Capability_WEBHOOKER  Capability = 4
+)
+
+// Enum value maps for Capability.
+var (
+	Capability_name = map[int32]string{
+		0: "DISPLAYER",
+		1: "MESSENGER",
+		2: "CONFIGURER",
+		3: "STORAGER",
+		4: "WEBHOOKER",
+	}
+	Capability_value = map[string]int32{
+		"DISPLAYER":  0,
+		"MESSENGER":  1,
+		"CONFIGURER": 2,
+		"STORAGER":   3,
+		"WEBHOOKER":  4,
+	}
+)
+
+func (x Capability) Enum() *Capability {
+	p := new(Capability)
+	*p = x
+	return p
+}
+
+func (x Capability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Capability) Descriptor() protoreflect.EnumDescriptor {
+	return file_meta_proto_enumTypes[0].Descriptor()
+}
+
+func (Capability) Type() protoreflect.EnumType {
+	return &file_meta_proto_enumTypes[0]
+}
+
+func (x Capability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Capability.Descriptor instead.
+func (Capability) EnumDescriptor() ([]byte, []int) {
+	return file_meta_proto_rawDescGZIP(), []int{0}
+}
+
 type Error struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Details       *anypb.Any             `protobuf:"bytes,1,opt,name=details,proto3" json:"details,omitempty"`
@@ -549,31 +604,27 @@ func (x *SetEnableRequest) GetEnable() bool {
 	return false
 }
 
-type UserUpdate struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Types that are valid to be assigned to Update:
-	//
-	//	*UserUpdate_Message
-	//	*UserUpdate_Config
-	Update        isUserUpdate_Update `protobuf_oneof:"update"`
+type PluginCapabilities struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Capabilities  []Capability           `protobuf:"varint,1,rep,packed,name=capabilities,proto3,enum=Capability" json:"capabilities,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UserUpdate) Reset() {
-	*x = UserUpdate{}
+func (x *PluginCapabilities) Reset() {
+	*x = PluginCapabilities{}
 	mi := &file_meta_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UserUpdate) String() string {
+func (x *PluginCapabilities) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UserUpdate) ProtoMessage() {}
+func (*PluginCapabilities) ProtoMessage() {}
 
-func (x *UserUpdate) ProtoReflect() protoreflect.Message {
+func (x *PluginCapabilities) ProtoReflect() protoreflect.Message {
 	mi := &file_meta_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -585,63 +636,138 @@ func (x *UserUpdate) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UserUpdate.ProtoReflect.Descriptor instead.
-func (*UserUpdate) Descriptor() ([]byte, []int) {
+// Deprecated: Use PluginCapabilities.ProtoReflect.Descriptor instead.
+func (*PluginCapabilities) Descriptor() ([]byte, []int) {
 	return file_meta_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *UserUpdate) GetUpdate() isUserUpdate_Update {
+func (x *PluginCapabilities) GetCapabilities() []Capability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+type InstanceUpdate struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Update:
+	//
+	//	*InstanceUpdate_Capabilities
+	//	*InstanceUpdate_Message
+	//	*InstanceUpdate_Storage
+	Update        isInstanceUpdate_Update `protobuf_oneof:"update"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InstanceUpdate) Reset() {
+	*x = InstanceUpdate{}
+	mi := &file_meta_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InstanceUpdate) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InstanceUpdate) ProtoMessage() {}
+
+func (x *InstanceUpdate) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InstanceUpdate.ProtoReflect.Descriptor instead.
+func (*InstanceUpdate) Descriptor() ([]byte, []int) {
+	return file_meta_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *InstanceUpdate) GetUpdate() isInstanceUpdate_Update {
 	if x != nil {
 		return x.Update
 	}
 	return nil
 }
 
-func (x *UserUpdate) GetMessage() *Message {
+func (x *InstanceUpdate) GetCapabilities() *PluginCapabilities {
 	if x != nil {
-		if x, ok := x.Update.(*UserUpdate_Message); ok {
+		if x, ok := x.Update.(*InstanceUpdate_Capabilities); ok {
+			return x.Capabilities
+		}
+	}
+	return nil
+}
+
+func (x *InstanceUpdate) GetMessage() *Message {
+	if x != nil {
+		if x, ok := x.Update.(*InstanceUpdate_Message); ok {
 			return x.Message
 		}
 	}
 	return nil
 }
 
-func (x *UserUpdate) GetConfig() string {
+func (x *InstanceUpdate) GetStorage() []byte {
 	if x != nil {
-		if x, ok := x.Update.(*UserUpdate_Config); ok {
-			return x.Config
+		if x, ok := x.Update.(*InstanceUpdate_Storage); ok {
+			return x.Storage
 		}
 	}
-	return ""
+	return nil
 }
 
-type isUserUpdate_Update interface {
-	isUserUpdate_Update()
+type isInstanceUpdate_Update interface {
+	isInstanceUpdate_Update()
 }
 
-type UserUpdate_Message struct {
-	Message *Message `protobuf:"bytes,1,opt,name=message,proto3,oneof"`
+type InstanceUpdate_Capabilities struct {
+	// which capabilities are displayed to the user
+	Capabilities *PluginCapabilities `protobuf:"bytes,1,opt,name=capabilities,proto3,oneof"`
 }
 
-type UserUpdate_Config struct {
-	Config string `protobuf:"bytes,2,opt,name=config,proto3,oneof"`
+type InstanceUpdate_Message struct {
+	// send a message to the user
+	Message *Message `protobuf:"bytes,2,opt,name=message,proto3,oneof"`
 }
 
-func (*UserUpdate_Message) isUserUpdate_Update() {}
+type InstanceUpdate_Storage struct {
+	// update persistent storage
+	Storage []byte `protobuf:"bytes,3,opt,name=storage,proto3,oneof"`
+}
 
-func (*UserUpdate_Config) isUserUpdate_Update() {}
+func (*InstanceUpdate_Capabilities) isInstanceUpdate_Update() {}
+
+func (*InstanceUpdate_Message) isInstanceUpdate_Update() {}
+
+func (*InstanceUpdate_Storage) isInstanceUpdate_Update() {}
 
 type UserInstanceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ServerVersion *ServerVersionInfo     `protobuf:"bytes,1,opt,name=serverVersion,proto3" json:"serverVersion,omitempty"`
-	User          *UserContext           `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// the server version info
+	ServerVersion *ServerVersionInfo `protobuf:"bytes,1,opt,name=serverVersion,proto3" json:"serverVersion,omitempty"`
+	// the user context
+	User *UserContext `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	// the webhook base path
+	WebhookBasePath *string `protobuf:"bytes,3,opt,name=webhookBasePath,proto3,oneof" json:"webhookBasePath,omitempty"`
+	// the config
+	Config []byte `protobuf:"bytes,4,opt,name=config,proto3,oneof" json:"config,omitempty"`
+	// the storage
+	Storage       []byte `protobuf:"bytes,5,opt,name=storage,proto3,oneof" json:"storage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserInstanceRequest) Reset() {
 	*x = UserInstanceRequest{}
-	mi := &file_meta_proto_msgTypes[9]
+	mi := &file_meta_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -653,7 +779,7 @@ func (x *UserInstanceRequest) String() string {
 func (*UserInstanceRequest) ProtoMessage() {}
 
 func (x *UserInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[9]
+	mi := &file_meta_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -666,7 +792,7 @@ func (x *UserInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserInstanceRequest.ProtoReflect.Descriptor instead.
 func (*UserInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{9}
+	return file_meta_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UserInstanceRequest) GetServerVersion() *ServerVersionInfo {
@@ -679,6 +805,27 @@ func (x *UserInstanceRequest) GetServerVersion() *ServerVersionInfo {
 func (x *UserInstanceRequest) GetUser() *UserContext {
 	if x != nil {
 		return x.User
+	}
+	return nil
+}
+
+func (x *UserInstanceRequest) GetWebhookBasePath() string {
+	if x != nil && x.WebhookBasePath != nil {
+		return *x.WebhookBasePath
+	}
+	return ""
+}
+
+func (x *UserInstanceRequest) GetConfig() []byte {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+func (x *UserInstanceRequest) GetStorage() []byte {
+	if x != nil {
+		return x.Storage
 	}
 	return nil
 }
@@ -735,18 +882,37 @@ const file_meta_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\f.ExtrasValueR\x05value:\x028\x01\"L\n" +
 	"\x10SetEnableRequest\x12 \n" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x16\n" +
-	"\x06enable\x18\x02 \x01(\bR\x06enable\"V\n" +
-	"\n" +
-	"UserUpdate\x12$\n" +
-	"\amessage\x18\x01 \x01(\v2\b.MessageH\x00R\amessage\x12\x18\n" +
-	"\x06config\x18\x02 \x01(\tH\x00R\x06configB\b\n" +
-	"\x06update\"q\n" +
+	"\x06enable\x18\x02 \x01(\bR\x06enable\"E\n" +
+	"\x12PluginCapabilities\x12/\n" +
+	"\fcapabilities\x18\x01 \x03(\x0e2\v.CapabilityR\fcapabilities\"\x97\x01\n" +
+	"\x0eInstanceUpdate\x129\n" +
+	"\fcapabilities\x18\x01 \x01(\v2\x13.PluginCapabilitiesH\x00R\fcapabilities\x12$\n" +
+	"\amessage\x18\x02 \x01(\v2\b.MessageH\x00R\amessage\x12\x1a\n" +
+	"\astorage\x18\x03 \x01(\fH\x00R\astorageB\b\n" +
+	"\x06update\"\x87\x02\n" +
 	"\x13UserInstanceRequest\x128\n" +
 	"\rserverVersion\x18\x01 \x01(\v2\x12.ServerVersionInfoR\rserverVersion\x12 \n" +
-	"\x04user\x18\x02 \x01(\v2\f.UserContextR\x04user2p\n" +
+	"\x04user\x18\x02 \x01(\v2\f.UserContextR\x04user\x12-\n" +
+	"\x0fwebhookBasePath\x18\x03 \x01(\tH\x00R\x0fwebhookBasePath\x88\x01\x01\x12\x1b\n" +
+	"\x06config\x18\x04 \x01(\fH\x01R\x06config\x88\x01\x01\x12\x1d\n" +
+	"\astorage\x18\x05 \x01(\fH\x02R\astorage\x88\x01\x01B\x12\n" +
+	"\x10_webhookBasePathB\t\n" +
+	"\a_configB\n" +
+	"\n" +
+	"\b_storage*W\n" +
+	"\n" +
+	"Capability\x12\r\n" +
+	"\tDISPLAYER\x10\x00\x12\r\n" +
+	"\tMESSENGER\x10\x01\x12\x0e\n" +
+	"\n" +
+	"CONFIGURER\x10\x02\x12\f\n" +
+	"\bSTORAGER\x10\x03\x12\r\n" +
+	"\tWEBHOOKER\x10\x042\xe3\x01\n" +
 	"\x06Plugin\x12.\n" +
 	"\rGetPluginInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info\x126\n" +
-	"\x0fRunUserInstance\x12\x14.UserInstanceRequest\x1a\v.UserUpdate0\x01B\x16Z\x14./generated/protobufb\x06proto3"
+	"\tSetEnable\x12\x11.SetEnableRequest\x1a\x16.google.protobuf.Empty\x125\n" +
+	"\vUserUpdates\x12\f.UserContext\x1a\x16.google.protobuf.Empty(\x01\x12:\n" +
+	"\x0fRunUserInstance\x12\x14.UserInstanceRequest\x1a\x0f.InstanceUpdate0\x01B\x16Z\x14./generated/protobufb\x06proto3"
 
 var (
 	file_meta_proto_rawDescOnce sync.Once
@@ -760,40 +926,49 @@ func file_meta_proto_rawDescGZIP() []byte {
 	return file_meta_proto_rawDescData
 }
 
-var file_meta_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_meta_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_meta_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_meta_proto_goTypes = []any{
-	(*Error)(nil),               // 0: Error
-	(*UserContext)(nil),         // 1: UserContext
-	(*Capabilities)(nil),        // 2: Capabilities
-	(*ServerVersionInfo)(nil),   // 3: ServerVersionInfo
-	(*Info)(nil),                // 4: Info
-	(*ExtrasValue)(nil),         // 5: ExtrasValue
-	(*Message)(nil),             // 6: Message
-	(*SetEnableRequest)(nil),    // 7: SetEnableRequest
-	(*UserUpdate)(nil),          // 8: UserUpdate
-	(*UserInstanceRequest)(nil), // 9: UserInstanceRequest
-	nil,                         // 10: Message.ExtrasEntry
-	(*anypb.Any)(nil),           // 11: google.protobuf.Any
-	(*emptypb.Empty)(nil),       // 12: google.protobuf.Empty
+	(Capability)(0),             // 0: Capability
+	(*Error)(nil),               // 1: Error
+	(*UserContext)(nil),         // 2: UserContext
+	(*Capabilities)(nil),        // 3: Capabilities
+	(*ServerVersionInfo)(nil),   // 4: ServerVersionInfo
+	(*Info)(nil),                // 5: Info
+	(*ExtrasValue)(nil),         // 6: ExtrasValue
+	(*Message)(nil),             // 7: Message
+	(*SetEnableRequest)(nil),    // 8: SetEnableRequest
+	(*PluginCapabilities)(nil),  // 9: PluginCapabilities
+	(*InstanceUpdate)(nil),      // 10: InstanceUpdate
+	(*UserInstanceRequest)(nil), // 11: UserInstanceRequest
+	nil,                         // 12: Message.ExtrasEntry
+	(*anypb.Any)(nil),           // 13: google.protobuf.Any
+	(*emptypb.Empty)(nil),       // 14: google.protobuf.Empty
 }
 var file_meta_proto_depIdxs = []int32{
-	11, // 0: Error.details:type_name -> google.protobuf.Any
-	2,  // 1: Info.capabilities:type_name -> Capabilities
-	10, // 2: Message.extras:type_name -> Message.ExtrasEntry
-	1,  // 3: SetEnableRequest.user:type_name -> UserContext
-	6,  // 4: UserUpdate.message:type_name -> Message
-	3,  // 5: UserInstanceRequest.serverVersion:type_name -> ServerVersionInfo
-	1,  // 6: UserInstanceRequest.user:type_name -> UserContext
-	5,  // 7: Message.ExtrasEntry.value:type_name -> ExtrasValue
-	12, // 8: Plugin.GetPluginInfo:input_type -> google.protobuf.Empty
-	9,  // 9: Plugin.RunUserInstance:input_type -> UserInstanceRequest
-	4,  // 10: Plugin.GetPluginInfo:output_type -> Info
-	8,  // 11: Plugin.RunUserInstance:output_type -> UserUpdate
-	10, // [10:12] is the sub-list for method output_type
-	8,  // [8:10] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	13, // 0: Error.details:type_name -> google.protobuf.Any
+	3,  // 1: Info.capabilities:type_name -> Capabilities
+	12, // 2: Message.extras:type_name -> Message.ExtrasEntry
+	2,  // 3: SetEnableRequest.user:type_name -> UserContext
+	0,  // 4: PluginCapabilities.capabilities:type_name -> Capability
+	9,  // 5: InstanceUpdate.capabilities:type_name -> PluginCapabilities
+	7,  // 6: InstanceUpdate.message:type_name -> Message
+	4,  // 7: UserInstanceRequest.serverVersion:type_name -> ServerVersionInfo
+	2,  // 8: UserInstanceRequest.user:type_name -> UserContext
+	6,  // 9: Message.ExtrasEntry.value:type_name -> ExtrasValue
+	14, // 10: Plugin.GetPluginInfo:input_type -> google.protobuf.Empty
+	8,  // 11: Plugin.SetEnable:input_type -> SetEnableRequest
+	2,  // 12: Plugin.UserUpdates:input_type -> UserContext
+	11, // 13: Plugin.RunUserInstance:input_type -> UserInstanceRequest
+	5,  // 14: Plugin.GetPluginInfo:output_type -> Info
+	14, // 15: Plugin.SetEnable:output_type -> google.protobuf.Empty
+	14, // 16: Plugin.UserUpdates:output_type -> google.protobuf.Empty
+	10, // 17: Plugin.RunUserInstance:output_type -> InstanceUpdate
+	14, // [14:18] is the sub-list for method output_type
+	10, // [10:14] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_meta_proto_init() }
@@ -805,22 +980,25 @@ func file_meta_proto_init() {
 	file_meta_proto_msgTypes[5].OneofWrappers = []any{
 		(*ExtrasValue_Json)(nil),
 	}
-	file_meta_proto_msgTypes[8].OneofWrappers = []any{
-		(*UserUpdate_Message)(nil),
-		(*UserUpdate_Config)(nil),
+	file_meta_proto_msgTypes[9].OneofWrappers = []any{
+		(*InstanceUpdate_Capabilities)(nil),
+		(*InstanceUpdate_Message)(nil),
+		(*InstanceUpdate_Storage)(nil),
 	}
+	file_meta_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_proto_rawDesc), len(file_meta_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   11,
+			NumEnums:      1,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_meta_proto_goTypes,
 		DependencyIndexes: file_meta_proto_depIdxs,
+		EnumInfos:         file_meta_proto_enumTypes,
 		MessageInfos:      file_meta_proto_msgTypes,
 	}.Build()
 	File_meta_proto = out.File

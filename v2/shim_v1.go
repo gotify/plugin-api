@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"plugin"
+	"slices"
 	"strings"
 	"sync"
 
@@ -257,7 +258,9 @@ func (s *compatV1ShimServer) Display(ctx context.Context, req *protobuf.DisplayR
 			return nil, err
 		}
 		return &protobuf.DisplayResponse{
-			Display: displayer.GetDisplay(location),
+			Response: &protobuf.DisplayResponse_Markdown{
+				Markdown: displayer.GetDisplay(location),
+			},
 		}, nil
 	}
 	return nil, errors.New("instance does not implement displayer")
@@ -297,8 +300,8 @@ func (s *compatV1ShimServer) ValidateAndSetConfig(ctx context.Context, req *prot
 		}
 		if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
 			return &protobuf.ValidateAndSetConfigResponse{
-				Response: &protobuf.ValidateAndSetConfigResponse_Error{
-					Error: &protobuf.Error{
+				Response: &protobuf.ValidateAndSetConfigResponse_ValidationError{
+					ValidationError: &protobuf.Error{
 						Message: err.Error(),
 					},
 				},
@@ -327,46 +330,83 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 	}
 
 	// enable supported capabilities
-	var capabilities []protobuf.Capability
 	if _, ok := instance.(papiv1.Displayer); ok {
-		capabilities = append(capabilities, protobuf.Capability_DISPLAYER)
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_DISPLAYER) {
+			stream.Send(&protobuf.InstanceUpdate{
+				Update: &protobuf.InstanceUpdate_Capable{
+					Capable: protobuf.Capability_DISPLAYER,
+				},
+			})
+		} else {
+			return errors.New("displayer not supported by server but V1 API does not support backwards compatibility")
+		}
 	}
 	if _, ok := instance.(papiv1.Messenger); ok {
-		capabilities = append(capabilities, protobuf.Capability_MESSENGER)
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_MESSENGER) {
+			stream.Send(&protobuf.InstanceUpdate{
+				Update: &protobuf.InstanceUpdate_Capable{
+					Capable: protobuf.Capability_MESSENGER,
+				},
+			})
+		} else {
+			return errors.New("messenger not supported by server but V1 API does not support backwards compatibility")
+		}
 	}
 	if _, ok := instance.(papiv1.Configurer); ok {
-		capabilities = append(capabilities, protobuf.Capability_CONFIGURER)
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_CONFIGURER) {
+			stream.Send(&protobuf.InstanceUpdate{
+				Update: &protobuf.InstanceUpdate_Capable{
+					Capable: protobuf.Capability_CONFIGURER,
+				},
+			})
+		} else {
+			return errors.New("configurer not supported by server but V1 API does not support backwards compatibility")
+		}
 	}
 	if _, ok := instance.(papiv1.Storager); ok {
-		capabilities = append(capabilities, protobuf.Capability_STORAGER)
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_STORAGER) {
+			stream.Send(&protobuf.InstanceUpdate{
+				Update: &protobuf.InstanceUpdate_Capable{
+					Capable: protobuf.Capability_STORAGER,
+				},
+			})
+		} else {
+			return errors.New("storager not supported by server but V1 API does not support backwards compatibility")
+		}
 	}
 	if _, ok := instance.(papiv1.Webhooker); ok {
-		capabilities = append(capabilities, protobuf.Capability_WEBHOOKER)
-	}
-
-	if err := stream.Send(&protobuf.InstanceUpdate{
-		Update: &protobuf.InstanceUpdate_Capabilities{
-			Capabilities: &protobuf.PluginCapabilities{
-				Capabilities: capabilities,
-			},
-		},
-	}); err != nil {
-		return err
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_WEBHOOKER) {
+			stream.Send(&protobuf.InstanceUpdate{
+				Update: &protobuf.InstanceUpdate_Capable{
+					Capable: protobuf.Capability_WEBHOOKER,
+				},
+			})
+		} else {
+			return errors.New("webhooker not supported by server but V1 API does not support backwards compatibility")
+		}
 	}
 
 	if messenger, ok := instance.(papiv1.Messenger); ok {
-		messenger.SetMessageHandler(&shimV1MessageHandler{
-			stream: &stream,
-		})
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_MESSENGER) {
+			messenger.SetMessageHandler(&shimV1MessageHandler{
+				stream: &stream,
+			})
+		} else {
+			return errors.New("messenger not supported by server but V1 API does not support backwards compatibility")
+		}
 	}
 
 	if configurer, ok := instance.(papiv1.Configurer); ok {
-		currentConfig := configurer.DefaultConfig()
-		if req.Config != nil {
-			yaml.Unmarshal(req.Config, &currentConfig)
-			if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
-				return err
+		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_CONFIGURER) {
+			currentConfig := configurer.DefaultConfig()
+			if req.Config != nil {
+				yaml.Unmarshal(req.Config, &currentConfig)
+				if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
+					return err
+				}
 			}
+		} else {
+			return errors.New("configurer not supported by server but V1 API does not support backwards compatibility")
 		}
 	}
 

@@ -22,12 +22,6 @@ message Capabilities {
     optional uint32 Webhooker = 3;
 }
 
-message ServerVersionInfo {
-    string version = 1;
-    string commit = 2;
-    string buildDate = 3;
-}
-
 message Info {
     string version = 1;
     string author = 2;
@@ -65,14 +59,10 @@ enum Capability {
     WEBHOOKER = 4;
 }
 
-message PluginCapabilities {
-    repeated Capability capabilities = 1;
-}
-
 message InstanceUpdate {
     oneof update {
-        // which capabilities are displayed to the user
-        PluginCapabilities capabilities = 1;
+        // enable support for a feature, must be one of the capabilities supported by the server
+        Capability capable = 1;
         // send a message to the user
         Message message = 2;
         // update persistent storage
@@ -91,6 +81,14 @@ message UserInstanceRequest {
     optional bytes config = 4;
     // the storage
     optional bytes storage = 5;
+}
+
+message ServerVersionInfo {
+    string version = 1;
+    string commit = 2;
+    string buildDate = 3;
+    // supported capabilities of the gotify server itself
+    repeated Capability capabilities = 4;
 }
 
 // The base plugin service, which includes a plugin metadata endpoint, a per-user master switch,

@@ -22,9 +22,11 @@ const (
 )
 
 type DisplayRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *UserContext           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
-	Location      string                 `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user context the display belongs to.
+	User *UserContext `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// The base URL of the plugin control panel.
+	Location      string `protobuf:"bytes,2,opt,name=location,proto3" json:"location,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -74,8 +76,11 @@ func (x *DisplayRequest) GetLocation() string {
 }
 
 type DisplayResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Display       string                 `protobuf:"bytes,1,opt,name=display,proto3" json:"display,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Types that are valid to be assigned to Response:
+	//
+	//	*DisplayResponse_Markdown
+	Response      isDisplayResponse_Response `protobuf_oneof:"response"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,12 +115,32 @@ func (*DisplayResponse) Descriptor() ([]byte, []int) {
 	return file_display_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *DisplayResponse) GetDisplay() string {
+func (x *DisplayResponse) GetResponse() isDisplayResponse_Response {
 	if x != nil {
-		return x.Display
+		return x.Response
+	}
+	return nil
+}
+
+func (x *DisplayResponse) GetMarkdown() string {
+	if x != nil {
+		if x, ok := x.Response.(*DisplayResponse_Markdown); ok {
+			return x.Markdown
+		}
 	}
 	return ""
 }
+
+type isDisplayResponse_Response interface {
+	isDisplayResponse_Response()
+}
+
+type DisplayResponse_Markdown struct {
+	// The display response in markdown format.
+	Markdown string `protobuf:"bytes,1,opt,name=markdown,proto3,oneof"`
+}
+
+func (*DisplayResponse_Markdown) isDisplayResponse_Response() {}
 
 var File_display_proto protoreflect.FileDescriptor
 
@@ -125,9 +150,11 @@ const file_display_proto_rawDesc = "" +
 	"meta.proto\"N\n" +
 	"\x0eDisplayRequest\x12 \n" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation\"+\n" +
-	"\x0fDisplayResponse\x12\x18\n" +
-	"\adisplay\x18\x01 \x01(\tR\adisplay29\n" +
+	"\blocation\x18\x02 \x01(\tR\blocation\";\n" +
+	"\x0fDisplayResponse\x12\x1c\n" +
+	"\bmarkdown\x18\x01 \x01(\tH\x00R\bmarkdownB\n" +
+	"\n" +
+	"\bresponse29\n" +
 	"\tDisplayer\x12,\n" +
 	"\aDisplay\x12\x0f.DisplayRequest\x1a\x10.DisplayResponseB\x16Z\x14./generated/protobufb\x06proto3"
 
@@ -166,6 +193,9 @@ func file_display_proto_init() {
 		return
 	}
 	file_meta_proto_init()
+	file_display_proto_msgTypes[1].OneofWrappers = []any{
+		(*DisplayResponse_Markdown)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -6,6 +6,7 @@ option go_package = "./generated/protobuf";
 
 message ServerEvent {
     oneof event {
+        // A user has been created or updated.
         UserContext user = 1;
     }
 }

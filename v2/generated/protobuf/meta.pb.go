@@ -258,66 +258,6 @@ func (x *Capabilities) GetWebhooker() uint32 {
 	return 0
 }
 
-type ServerVersionInfo struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	Commit        string                 `protobuf:"bytes,2,opt,name=commit,proto3" json:"commit,omitempty"`
-	BuildDate     string                 `protobuf:"bytes,3,opt,name=buildDate,proto3" json:"buildDate,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ServerVersionInfo) Reset() {
-	*x = ServerVersionInfo{}
-	mi := &file_meta_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ServerVersionInfo) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ServerVersionInfo) ProtoMessage() {}
-
-func (x *ServerVersionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ServerVersionInfo.ProtoReflect.Descriptor instead.
-func (*ServerVersionInfo) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *ServerVersionInfo) GetVersion() string {
-	if x != nil {
-		return x.Version
-	}
-	return ""
-}
-
-func (x *ServerVersionInfo) GetCommit() string {
-	if x != nil {
-		return x.Commit
-	}
-	return ""
-}
-
-func (x *ServerVersionInfo) GetBuildDate() string {
-	if x != nil {
-		return x.BuildDate
-	}
-	return ""
-}
-
 type Info struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
@@ -334,7 +274,7 @@ type Info struct {
 
 func (x *Info) Reset() {
 	*x = Info{}
-	mi := &file_meta_proto_msgTypes[4]
+	mi := &file_meta_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -346,7 +286,7 @@ func (x *Info) String() string {
 func (*Info) ProtoMessage() {}
 
 func (x *Info) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[4]
+	mi := &file_meta_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,7 +299,7 @@ func (x *Info) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Info.ProtoReflect.Descriptor instead.
 func (*Info) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{4}
+	return file_meta_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Info) GetVersion() string {
@@ -430,7 +370,7 @@ type ExtrasValue struct {
 
 func (x *ExtrasValue) Reset() {
 	*x = ExtrasValue{}
-	mi := &file_meta_proto_msgTypes[5]
+	mi := &file_meta_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +382,7 @@ func (x *ExtrasValue) String() string {
 func (*ExtrasValue) ProtoMessage() {}
 
 func (x *ExtrasValue) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[5]
+	mi := &file_meta_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +395,7 @@ func (x *ExtrasValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExtrasValue.ProtoReflect.Descriptor instead.
 func (*ExtrasValue) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{5}
+	return file_meta_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ExtrasValue) GetValue() isExtrasValue_Value {
@@ -496,7 +436,7 @@ type Message struct {
 
 func (x *Message) Reset() {
 	*x = Message{}
-	mi := &file_meta_proto_msgTypes[6]
+	mi := &file_meta_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -508,7 +448,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[6]
+	mi := &file_meta_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -521,7 +461,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{6}
+	return file_meta_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Message) GetMessage() string {
@@ -562,7 +502,7 @@ type SetEnableRequest struct {
 
 func (x *SetEnableRequest) Reset() {
 	*x = SetEnableRequest{}
-	mi := &file_meta_proto_msgTypes[7]
+	mi := &file_meta_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -574,7 +514,7 @@ func (x *SetEnableRequest) String() string {
 func (*SetEnableRequest) ProtoMessage() {}
 
 func (x *SetEnableRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[7]
+	mi := &file_meta_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -587,7 +527,7 @@ func (x *SetEnableRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetEnableRequest.ProtoReflect.Descriptor instead.
 func (*SetEnableRequest) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{7}
+	return file_meta_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *SetEnableRequest) GetUser() *UserContext {
@@ -604,55 +544,11 @@ func (x *SetEnableRequest) GetEnable() bool {
 	return false
 }
 
-type PluginCapabilities struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Capabilities  []Capability           `protobuf:"varint,1,rep,packed,name=capabilities,proto3,enum=Capability" json:"capabilities,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PluginCapabilities) Reset() {
-	*x = PluginCapabilities{}
-	mi := &file_meta_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PluginCapabilities) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PluginCapabilities) ProtoMessage() {}
-
-func (x *PluginCapabilities) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PluginCapabilities.ProtoReflect.Descriptor instead.
-func (*PluginCapabilities) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *PluginCapabilities) GetCapabilities() []Capability {
-	if x != nil {
-		return x.Capabilities
-	}
-	return nil
-}
-
 type InstanceUpdate struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Update:
 	//
-	//	*InstanceUpdate_Capabilities
+	//	*InstanceUpdate_Capable
 	//	*InstanceUpdate_Message
 	//	*InstanceUpdate_Storage
 	Update        isInstanceUpdate_Update `protobuf_oneof:"update"`
@@ -662,7 +558,7 @@ type InstanceUpdate struct {
 
 func (x *InstanceUpdate) Reset() {
 	*x = InstanceUpdate{}
-	mi := &file_meta_proto_msgTypes[9]
+	mi := &file_meta_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -674,7 +570,7 @@ func (x *InstanceUpdate) String() string {
 func (*InstanceUpdate) ProtoMessage() {}
 
 func (x *InstanceUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[9]
+	mi := &file_meta_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -687,7 +583,7 @@ func (x *InstanceUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InstanceUpdate.ProtoReflect.Descriptor instead.
 func (*InstanceUpdate) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{9}
+	return file_meta_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *InstanceUpdate) GetUpdate() isInstanceUpdate_Update {
@@ -697,13 +593,13 @@ func (x *InstanceUpdate) GetUpdate() isInstanceUpdate_Update {
 	return nil
 }
 
-func (x *InstanceUpdate) GetCapabilities() *PluginCapabilities {
+func (x *InstanceUpdate) GetCapable() Capability {
 	if x != nil {
-		if x, ok := x.Update.(*InstanceUpdate_Capabilities); ok {
-			return x.Capabilities
+		if x, ok := x.Update.(*InstanceUpdate_Capable); ok {
+			return x.Capable
 		}
 	}
-	return nil
+	return Capability_DISPLAYER
 }
 
 func (x *InstanceUpdate) GetMessage() *Message {
@@ -728,9 +624,9 @@ type isInstanceUpdate_Update interface {
 	isInstanceUpdate_Update()
 }
 
-type InstanceUpdate_Capabilities struct {
-	// which capabilities are displayed to the user
-	Capabilities *PluginCapabilities `protobuf:"bytes,1,opt,name=capabilities,proto3,oneof"`
+type InstanceUpdate_Capable struct {
+	// enable support for a feature, must be one of the capabilities supported by the server
+	Capable Capability `protobuf:"varint,1,opt,name=capable,proto3,enum=Capability,oneof"`
 }
 
 type InstanceUpdate_Message struct {
@@ -743,7 +639,7 @@ type InstanceUpdate_Storage struct {
 	Storage []byte `protobuf:"bytes,3,opt,name=storage,proto3,oneof"`
 }
 
-func (*InstanceUpdate_Capabilities) isInstanceUpdate_Update() {}
+func (*InstanceUpdate_Capable) isInstanceUpdate_Update() {}
 
 func (*InstanceUpdate_Message) isInstanceUpdate_Update() {}
 
@@ -767,7 +663,7 @@ type UserInstanceRequest struct {
 
 func (x *UserInstanceRequest) Reset() {
 	*x = UserInstanceRequest{}
-	mi := &file_meta_proto_msgTypes[10]
+	mi := &file_meta_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -779,7 +675,7 @@ func (x *UserInstanceRequest) String() string {
 func (*UserInstanceRequest) ProtoMessage() {}
 
 func (x *UserInstanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_meta_proto_msgTypes[10]
+	mi := &file_meta_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -792,7 +688,7 @@ func (x *UserInstanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserInstanceRequest.ProtoReflect.Descriptor instead.
 func (*UserInstanceRequest) Descriptor() ([]byte, []int) {
-	return file_meta_proto_rawDescGZIP(), []int{10}
+	return file_meta_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UserInstanceRequest) GetServerVersion() *ServerVersionInfo {
@@ -830,6 +726,75 @@ func (x *UserInstanceRequest) GetStorage() []byte {
 	return nil
 }
 
+type ServerVersionInfo struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Version   string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Commit    string                 `protobuf:"bytes,2,opt,name=commit,proto3" json:"commit,omitempty"`
+	BuildDate string                 `protobuf:"bytes,3,opt,name=buildDate,proto3" json:"buildDate,omitempty"`
+	// supported capabilities of the gotify server itself
+	Capabilities  []Capability `protobuf:"varint,4,rep,packed,name=capabilities,proto3,enum=Capability" json:"capabilities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerVersionInfo) Reset() {
+	*x = ServerVersionInfo{}
+	mi := &file_meta_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerVersionInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerVersionInfo) ProtoMessage() {}
+
+func (x *ServerVersionInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_meta_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerVersionInfo.ProtoReflect.Descriptor instead.
+func (*ServerVersionInfo) Descriptor() ([]byte, []int) {
+	return file_meta_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ServerVersionInfo) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *ServerVersionInfo) GetCommit() string {
+	if x != nil {
+		return x.Commit
+	}
+	return ""
+}
+
+func (x *ServerVersionInfo) GetBuildDate() string {
+	if x != nil {
+		return x.BuildDate
+	}
+	return ""
+}
+
+func (x *ServerVersionInfo) GetCapabilities() []Capability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
 var File_meta_proto protoreflect.FileDescriptor
 
 const file_meta_proto_rawDesc = "" +
@@ -854,11 +819,7 @@ const file_meta_proto_rawDesc = "" +
 	"_DisplayerB\r\n" +
 	"\v_ConfigurerB\f\n" +
 	"\n" +
-	"_Webhooker\"c\n" +
-	"\x11ServerVersionInfo\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
-	"\x06commit\x18\x02 \x01(\tR\x06commit\x12\x1c\n" +
-	"\tbuildDate\x18\x03 \x01(\tR\tbuildDate\"\xf6\x01\n" +
+	"_Webhooker\"\xf6\x01\n" +
 	"\x04Info\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
 	"\x06author\x18\x02 \x01(\tR\x06author\x12\x12\n" +
@@ -882,11 +843,9 @@ const file_meta_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\f.ExtrasValueR\x05value:\x028\x01\"L\n" +
 	"\x10SetEnableRequest\x12 \n" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x16\n" +
-	"\x06enable\x18\x02 \x01(\bR\x06enable\"E\n" +
-	"\x12PluginCapabilities\x12/\n" +
-	"\fcapabilities\x18\x01 \x03(\x0e2\v.CapabilityR\fcapabilities\"\x97\x01\n" +
-	"\x0eInstanceUpdate\x129\n" +
-	"\fcapabilities\x18\x01 \x01(\v2\x13.PluginCapabilitiesH\x00R\fcapabilities\x12$\n" +
+	"\x06enable\x18\x02 \x01(\bR\x06enable\"\x85\x01\n" +
+	"\x0eInstanceUpdate\x12'\n" +
+	"\acapable\x18\x01 \x01(\x0e2\v.CapabilityH\x00R\acapable\x12$\n" +
 	"\amessage\x18\x02 \x01(\v2\b.MessageH\x00R\amessage\x12\x1a\n" +
 	"\astorage\x18\x03 \x01(\fH\x00R\astorageB\b\n" +
 	"\x06update\"\x87\x02\n" +
@@ -899,7 +858,12 @@ const file_meta_proto_rawDesc = "" +
 	"\x10_webhookBasePathB\t\n" +
 	"\a_configB\n" +
 	"\n" +
-	"\b_storage*W\n" +
+	"\b_storage\"\x94\x01\n" +
+	"\x11ServerVersionInfo\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\tR\aversion\x12\x16\n" +
+	"\x06commit\x18\x02 \x01(\tR\x06commit\x12\x1c\n" +
+	"\tbuildDate\x18\x03 \x01(\tR\tbuildDate\x12/\n" +
+	"\fcapabilities\x18\x04 \x03(\x0e2\v.CapabilityR\fcapabilities*W\n" +
 	"\n" +
 	"Capability\x12\r\n" +
 	"\tDISPLAYER\x10\x00\x12\r\n" +
@@ -926,41 +890,40 @@ func file_meta_proto_rawDescGZIP() []byte {
 }
 
 var file_meta_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_meta_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_meta_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_meta_proto_goTypes = []any{
 	(Capability)(0),             // 0: Capability
 	(*Error)(nil),               // 1: Error
 	(*UserContext)(nil),         // 2: UserContext
 	(*Capabilities)(nil),        // 3: Capabilities
-	(*ServerVersionInfo)(nil),   // 4: ServerVersionInfo
-	(*Info)(nil),                // 5: Info
-	(*ExtrasValue)(nil),         // 6: ExtrasValue
-	(*Message)(nil),             // 7: Message
-	(*SetEnableRequest)(nil),    // 8: SetEnableRequest
-	(*PluginCapabilities)(nil),  // 9: PluginCapabilities
-	(*InstanceUpdate)(nil),      // 10: InstanceUpdate
-	(*UserInstanceRequest)(nil), // 11: UserInstanceRequest
-	nil,                         // 12: Message.ExtrasEntry
-	(*anypb.Any)(nil),           // 13: google.protobuf.Any
-	(*emptypb.Empty)(nil),       // 14: google.protobuf.Empty
+	(*Info)(nil),                // 4: Info
+	(*ExtrasValue)(nil),         // 5: ExtrasValue
+	(*Message)(nil),             // 6: Message
+	(*SetEnableRequest)(nil),    // 7: SetEnableRequest
+	(*InstanceUpdate)(nil),      // 8: InstanceUpdate
+	(*UserInstanceRequest)(nil), // 9: UserInstanceRequest
+	(*ServerVersionInfo)(nil),   // 10: ServerVersionInfo
+	nil,                         // 11: Message.ExtrasEntry
+	(*anypb.Any)(nil),           // 12: google.protobuf.Any
+	(*emptypb.Empty)(nil),       // 13: google.protobuf.Empty
 }
 var file_meta_proto_depIdxs = []int32{
-	13, // 0: Error.details:type_name -> google.protobuf.Any
+	12, // 0: Error.details:type_name -> google.protobuf.Any
 	3,  // 1: Info.capabilities:type_name -> Capabilities
-	12, // 2: Message.extras:type_name -> Message.ExtrasEntry
+	11, // 2: Message.extras:type_name -> Message.ExtrasEntry
 	2,  // 3: SetEnableRequest.user:type_name -> UserContext
-	0,  // 4: PluginCapabilities.capabilities:type_name -> Capability
-	9,  // 5: InstanceUpdate.capabilities:type_name -> PluginCapabilities
-	7,  // 6: InstanceUpdate.message:type_name -> Message
-	4,  // 7: UserInstanceRequest.serverVersion:type_name -> ServerVersionInfo
-	2,  // 8: UserInstanceRequest.user:type_name -> UserContext
-	6,  // 9: Message.ExtrasEntry.value:type_name -> ExtrasValue
-	14, // 10: Plugin.GetPluginInfo:input_type -> google.protobuf.Empty
-	8,  // 11: Plugin.SetEnable:input_type -> SetEnableRequest
-	11, // 12: Plugin.RunUserInstance:input_type -> UserInstanceRequest
-	5,  // 13: Plugin.GetPluginInfo:output_type -> Info
-	14, // 14: Plugin.SetEnable:output_type -> google.protobuf.Empty
-	10, // 15: Plugin.RunUserInstance:output_type -> InstanceUpdate
+	0,  // 4: InstanceUpdate.capable:type_name -> Capability
+	6,  // 5: InstanceUpdate.message:type_name -> Message
+	10, // 6: UserInstanceRequest.serverVersion:type_name -> ServerVersionInfo
+	2,  // 7: UserInstanceRequest.user:type_name -> UserContext
+	0,  // 8: ServerVersionInfo.capabilities:type_name -> Capability
+	5,  // 9: Message.ExtrasEntry.value:type_name -> ExtrasValue
+	13, // 10: Plugin.GetPluginInfo:input_type -> google.protobuf.Empty
+	7,  // 11: Plugin.SetEnable:input_type -> SetEnableRequest
+	9,  // 12: Plugin.RunUserInstance:input_type -> UserInstanceRequest
+	4,  // 13: Plugin.GetPluginInfo:output_type -> Info
+	13, // 14: Plugin.SetEnable:output_type -> google.protobuf.Empty
+	8,  // 15: Plugin.RunUserInstance:output_type -> InstanceUpdate
 	13, // [13:16] is the sub-list for method output_type
 	10, // [10:13] is the sub-list for method input_type
 	10, // [10:10] is the sub-list for extension type_name
@@ -974,22 +937,22 @@ func file_meta_proto_init() {
 		return
 	}
 	file_meta_proto_msgTypes[2].OneofWrappers = []any{}
-	file_meta_proto_msgTypes[5].OneofWrappers = []any{
+	file_meta_proto_msgTypes[4].OneofWrappers = []any{
 		(*ExtrasValue_Json)(nil),
 	}
-	file_meta_proto_msgTypes[9].OneofWrappers = []any{
-		(*InstanceUpdate_Capabilities)(nil),
+	file_meta_proto_msgTypes[7].OneofWrappers = []any{
+		(*InstanceUpdate_Capable)(nil),
 		(*InstanceUpdate_Message)(nil),
 		(*InstanceUpdate_Storage)(nil),
 	}
-	file_meta_proto_msgTypes[10].OneofWrappers = []any{}
+	file_meta_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_meta_proto_rawDesc), len(file_meta_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

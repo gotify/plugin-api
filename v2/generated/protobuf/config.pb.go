@@ -23,8 +23,9 @@ const (
 )
 
 type Config struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Config        string                 `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The YAML configuration data.
+	Config        string `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -67,8 +68,9 @@ func (x *Config) GetConfig() string {
 }
 
 type DefaultConfigRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *UserContext           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user context the configuration belongs to.
+	User          *UserContext `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -111,9 +113,11 @@ func (x *DefaultConfigRequest) GetUser() *UserContext {
 }
 
 type ValidateAndSetConfigRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *UserContext           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
-	Config        *Config                `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user context the configuration belongs to.
+	User *UserContext `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// The YAML configuration data.
+	Config        *Config `protobuf:"bytes,2,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -164,10 +168,12 @@ func (x *ValidateAndSetConfigRequest) GetConfig() *Config {
 
 type ValidateAndSetConfigResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// The response to the request.
+	//
 	// Types that are valid to be assigned to Response:
 	//
 	//	*ValidateAndSetConfigResponse_Success
-	//	*ValidateAndSetConfigResponse_Error
+	//	*ValidateAndSetConfigResponse_ValidationError
 	Response      isValidateAndSetConfigResponse_Response `protobuf_oneof:"response"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -219,10 +225,10 @@ func (x *ValidateAndSetConfigResponse) GetSuccess() *emptypb.Empty {
 	return nil
 }
 
-func (x *ValidateAndSetConfigResponse) GetError() *Error {
+func (x *ValidateAndSetConfigResponse) GetValidationError() *Error {
 	if x != nil {
-		if x, ok := x.Response.(*ValidateAndSetConfigResponse_Error); ok {
-			return x.Error
+		if x, ok := x.Response.(*ValidateAndSetConfigResponse_ValidationError); ok {
+			return x.ValidationError
 		}
 	}
 	return nil
@@ -233,16 +239,18 @@ type isValidateAndSetConfigResponse_Response interface {
 }
 
 type ValidateAndSetConfigResponse_Success struct {
+	// The success response.
 	Success *emptypb.Empty `protobuf:"bytes,1,opt,name=success,proto3,oneof"`
 }
 
-type ValidateAndSetConfigResponse_Error struct {
-	Error *Error `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
+type ValidateAndSetConfigResponse_ValidationError struct {
+	// The validation error response.
+	ValidationError *Error `protobuf:"bytes,2,opt,name=validation_error,json=validationError,proto3,oneof"`
 }
 
 func (*ValidateAndSetConfigResponse_Success) isValidateAndSetConfigResponse_Response() {}
 
-func (*ValidateAndSetConfigResponse_Error) isValidateAndSetConfigResponse_Response() {}
+func (*ValidateAndSetConfigResponse_ValidationError) isValidateAndSetConfigResponse_Response() {}
 
 var File_config_proto protoreflect.FileDescriptor
 
@@ -256,10 +264,10 @@ const file_config_proto_rawDesc = "" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\"`\n" +
 	"\x1bValidateAndSetConfigRequest\x12 \n" +
 	"\x04user\x18\x01 \x01(\v2\f.UserContextR\x04user\x12\x1f\n" +
-	"\x06config\x18\x02 \x01(\v2\a.ConfigR\x06config\"~\n" +
+	"\x06config\x18\x02 \x01(\v2\a.ConfigR\x06config\"\x93\x01\n" +
 	"\x1cValidateAndSetConfigResponse\x122\n" +
-	"\asuccess\x18\x01 \x01(\v2\x16.google.protobuf.EmptyH\x00R\asuccess\x12\x1e\n" +
-	"\x05error\x18\x02 \x01(\v2\x06.ErrorH\x00R\x05errorB\n" +
+	"\asuccess\x18\x01 \x01(\v2\x16.google.protobuf.EmptyH\x00R\asuccess\x123\n" +
+	"\x10validation_error\x18\x02 \x01(\v2\x06.ErrorH\x00R\x0fvalidationErrorB\n" +
 	"\n" +
 	"\bresponse2\x92\x01\n" +
 	"\n" +
@@ -294,7 +302,7 @@ var file_config_proto_depIdxs = []int32{
 	4, // 1: ValidateAndSetConfigRequest.user:type_name -> UserContext
 	0, // 2: ValidateAndSetConfigRequest.config:type_name -> Config
 	5, // 3: ValidateAndSetConfigResponse.success:type_name -> google.protobuf.Empty
-	6, // 4: ValidateAndSetConfigResponse.error:type_name -> Error
+	6, // 4: ValidateAndSetConfigResponse.validation_error:type_name -> Error
 	1, // 5: Configurer.DefaultConfig:input_type -> DefaultConfigRequest
 	2, // 6: Configurer.ValidateAndSetConfig:input_type -> ValidateAndSetConfigRequest
 	0, // 7: Configurer.DefaultConfig:output_type -> Config
@@ -314,7 +322,7 @@ func file_config_proto_init() {
 	file_meta_proto_init()
 	file_config_proto_msgTypes[3].OneofWrappers = []any{
 		(*ValidateAndSetConfigResponse_Success)(nil),
-		(*ValidateAndSetConfigResponse_Error)(nil),
+		(*ValidateAndSetConfigResponse_ValidationError)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

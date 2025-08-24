@@ -83,6 +83,7 @@ type isServerEvent_Event interface {
 }
 
 type ServerEvent_User struct {
+	// A user has been created or updated.
 	User *UserContext `protobuf:"bytes,1,opt,name=user,proto3,oneof"`
 }
 

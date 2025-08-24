@@ -4,12 +4,17 @@ import "meta.proto";
 option go_package = "./generated/protobuf";
 
 message DisplayRequest {
+    // The user context the display belongs to.
     UserContext user = 1;
+    // The base URL of the plugin control panel.
     string location = 2;
 }
 
 message DisplayResponse {
-    string display = 1;
+    oneof response {
+        // The display response in markdown format.
+        string markdown = 1;
+    }
 }
 
 // A service that allows plugins to display content to the user.

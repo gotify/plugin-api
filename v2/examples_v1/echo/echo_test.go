@@ -15,6 +15,7 @@ import (
 	papiv1 "github.com/gotify/plugin-api"
 	"github.com/gotify/plugin-api/v2"
 	"github.com/gotify/plugin-api/v2/generated/protobuf"
+	"github.com/gotify/plugin-api/v2/transport"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -23,7 +24,7 @@ import (
 func TestEcho(t *testing.T) {
 	pluginInfo := GetGotifyPluginInfo()
 
-	client, err := plugin.NewEphemeralTLSClient()
+	client, err := transport.NewEphemeralTLSClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,8 +32,8 @@ func TestEcho(t *testing.T) {
 	var reqRx, reqTx uintptr
 	var respRx, respTx uintptr
 
-	plugin.NewAnonPipe(&reqRx, &reqTx, true)
-	plugin.NewAnonPipe(&respRx, &respTx, true)
+	transport.NewAnonPipe(&reqRx, &reqTx, true)
+	transport.NewAnonPipe(&respRx, &respTx, true)
 
 	go func() {
 		reqFileRx := os.NewFile(reqRx, fmt.Sprintf("/proc/self/fd/%d", reqRx))
@@ -57,7 +58,7 @@ func TestEcho(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	listener, addr, err := plugin.NewListener()
+	listener, addr, err := transport.NewListener()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +176,7 @@ func TestEcho(t *testing.T) {
 				t.Fatal("expected ", "Echo plugin running at: https://gotify.example.com/plugin/echo-test/echo", " got ", displayResponse.GetMarkdown())
 			}
 
-			tlsWebhookName := plugin.BuildPluginTLSName(plugin.PurposePluginWebhook, pluginInfo.ModulePath)
+			tlsWebhookName := transport.BuildPluginTLSName(transport.PurposePluginWebhook, pluginInfo.ModulePath)
 
 			for range 3 {
 				testreq := httptest.NewRequest("GET", "https://"+tlsWebhookName+"/plugin/echo-test/echo", nil)

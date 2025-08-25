@@ -11,6 +11,7 @@ import (
 	papiv1 "github.com/gotify/plugin-api"
 	"github.com/gotify/plugin-api/v2"
 	"github.com/gotify/plugin-api/v2/generated/protobuf"
+	"github.com/gotify/plugin-api/v2/transport"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -19,7 +20,7 @@ import (
 func testEchoImpl(t *testing.T, listener net.Listener, addr string) {
 	pluginInfo := GetGotifyPluginInfo()
 
-	client, err := plugin.NewEphemeralTLSClient()
+	client, err := transport.NewEphemeralTLSClient()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,8 +28,8 @@ func testEchoImpl(t *testing.T, listener net.Listener, addr string) {
 	var reqRx, reqTx uintptr
 	var respRx, respTx uintptr
 
-	plugin.NewAnonPipe(&reqRx, &reqTx, true)
-	plugin.NewAnonPipe(&respRx, &respTx, true)
+	transport.NewAnonPipe(&reqRx, &reqTx, true)
+	transport.NewAnonPipe(&respRx, &respTx, true)
 
 	go func() {
 		reqFileRx := os.NewFile(reqRx, fmt.Sprintf("/proc/self/fd/%d", reqRx))
@@ -109,7 +110,7 @@ func testEchoImpl(t *testing.T, listener net.Listener, addr string) {
 }
 
 func TestEcho(t *testing.T) {
-	listener, addr, err := plugin.NewListener()
+	listener, addr, err := transport.NewListener()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +118,7 @@ func TestEcho(t *testing.T) {
 }
 
 func TestEchoTCP(t *testing.T) {
-	listener, addr, err := plugin.NewTCPListener()
+	listener, addr, err := transport.NewTCPListener()
 	if err != nil {
 		t.Fatal(err)
 	}

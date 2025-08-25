@@ -1,6 +1,6 @@
 //go:build windows
 
-package plugin
+package transport
 
 import (
 	"unsafe"

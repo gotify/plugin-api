@@ -28,6 +28,7 @@ import (
 	"github.com/gin-gonic/gin"
 	papiv1 "github.com/gotify/plugin-api"
 	"github.com/gotify/plugin-api/v2/generated/protobuf"
+	"github.com/gotify/plugin-api/v2/transport"
 )
 
 type GrpcDialer interface {
@@ -106,7 +107,7 @@ func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error)
 	}
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
 		Subject: pkix.Name{
-			CommonName: BuildPluginTLSName("*", pluginInfo.ModulePath),
+			CommonName: transport.BuildPluginTLSName("*", pluginInfo.ModulePath),
 		},
 	}, priv)
 
@@ -204,7 +205,7 @@ func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pluginRpcHostName := BuildPluginTLSName(PurposePluginRPC, h.pluginInfo.ModulePath)
+	pluginRpcHostName := transport.BuildPluginTLSName(transport.PurposePluginRPC, h.pluginInfo.ModulePath)
 
 	if r.TLS.ServerName == pluginRpcHostName {
 		if r.ProtoMajor != 2 {
@@ -220,7 +221,7 @@ func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pluginWebhookHostName := BuildPluginTLSName(PurposePluginWebhook, h.pluginInfo.ModulePath)
+	pluginWebhookHostName := transport.BuildPluginTLSName(transport.PurposePluginWebhook, h.pluginInfo.ModulePath)
 	if r.TLS.ServerName == pluginWebhookHostName {
 		h.gin.ServeHTTP(w, r)
 		return

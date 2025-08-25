@@ -1,6 +1,6 @@
 //go:build unix
 
-package plugin
+package transport
 
 import (
 	"golang.org/x/sys/unix"

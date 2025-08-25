@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"testing"
 
@@ -15,7 +16,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func TestEcho(t *testing.T) {
+func testEchoImpl(t *testing.T, listener net.Listener, addr string) {
 	pluginInfo := GetGotifyPluginInfo()
 
 	client, err := plugin.NewEphemeralTLSClient()
@@ -50,10 +51,6 @@ func TestEcho(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	listener, addr, err := plugin.NewListener()
-	if err != nil {
-		t.Fatal(err)
-	}
 	go func() {
 		compatV1.ServeTLS(listener, "", "")
 	}()
@@ -109,4 +106,20 @@ func TestEcho(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func TestEcho(t *testing.T) {
+	listener, addr, err := plugin.NewListener()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testEchoImpl(t, listener, addr)
+}
+
+func TestEchoTCP(t *testing.T) {
+	listener, addr, err := plugin.NewTCPListener()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testEchoImpl(t, listener, addr)
 }

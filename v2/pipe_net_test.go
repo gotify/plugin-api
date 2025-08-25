@@ -52,10 +52,10 @@ func TestGrpcPipeNet(t *testing.T) {
 	defer listener.Close()
 	serverCsrBytes, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
 		Subject: pkix.Name{
-			CommonName: BuildPluginTLSName(purposePluginRPC, "test"),
+			CommonName: BuildPluginTLSName(PurposePluginRPC, "test"),
 		},
 		DNSNames: []string{
-			BuildPluginTLSName(purposePluginRPC, "test"),
+			BuildPluginTLSName(PurposePluginRPC, "test"),
 		},
 		PublicKey: serverPub,
 	}, serverPriv)

@@ -17,7 +17,7 @@ func TestEphemeralTLSClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pluginTlsName := BuildPluginTLSName(purposePluginRPC, "test")
+	pluginTlsName := BuildPluginTLSName(PurposePluginRPC, "test")
 	_, serverPriv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatal(err)
@@ -27,7 +27,7 @@ func TestEphemeralTLSClient(t *testing.T) {
 			CommonName: pluginTlsName,
 		},
 		DNSNames: []string{
-			BuildPluginTLSName(purposePluginRPC, "test"),
+			BuildPluginTLSName(PurposePluginRPC, "test"),
 		},
 	}, serverPriv)
 	if err != nil {

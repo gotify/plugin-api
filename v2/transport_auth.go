@@ -7,15 +7,17 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 	"time"
 )
 
 const (
-	purposePluginRPC     = "rpc"
-	purposePluginWebhook = "webhook"
+	PurposePluginRPC     = "rpc"
+	PurposePluginWebhook = "webhook"
 )
 
 const ServerTLSName = "server.gotify.home.arpa"
@@ -58,7 +60,7 @@ func (s *EphemeralTLSClient) ClientTLSConfig(moduleName string) *tls.Config {
 			},
 		},
 		RootCAs:    s.createCertPool(),
-		ServerName: BuildPluginTLSName(purposePluginRPC, moduleName),
+		ServerName: BuildPluginTLSName(PurposePluginRPC, moduleName),
 	}
 }
 
@@ -95,7 +97,52 @@ func (s *EphemeralTLSClient) SignCSR(dnsName string, csr *x509.CertificateReques
 }
 
 func (s *EphemeralTLSClient) SignPluginCSR(moduleName string, csr *x509.CertificateRequest) ([]byte, error) {
-	return s.SignCSR(BuildPluginTLSName(purposePluginRPC, moduleName), csr)
+	return s.SignCSR(BuildPluginTLSName("*", moduleName), csr)
+}
+
+func (s *EphemeralTLSClient) Kex(req io.Reader, resp io.Writer) error {
+	var csr *x509.CertificateRequest
+	var csrBytes []byte
+	for csr == nil {
+		var buf [2048]byte
+		n, err := req.Read(buf[:])
+		if err != nil {
+			return err
+		}
+		csrBytes = append(csrBytes, buf[:n]...)
+		block, _ := pem.Decode(csrBytes)
+		if block == nil {
+			continue
+		}
+
+		if block.Type == "CERTIFICATE REQUEST" {
+			csrParsed, err := x509.ParseCertificateRequest(block.Bytes)
+			if err != nil {
+				return err
+			}
+			csr = csrParsed
+		}
+	}
+	dnsName := csr.Subject.CommonName
+	certBytes, err := s.SignCSR(dnsName, csr)
+	if err != nil {
+		return err
+	}
+	_, err = resp.Write(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certBytes,
+	}))
+	if err != nil {
+		return err
+	}
+	_, err = resp.Write(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: s.caCert.Raw,
+	}))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewEphemeralTLSClient() (*EphemeralTLSClient, error) {

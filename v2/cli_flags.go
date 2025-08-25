@@ -6,37 +6,44 @@ import (
 )
 
 type PluginCliFlags struct {
-	flagSet  *flag.FlagSet
-	CAData   []byte
-	CertData []byte
-	KeyData  []byte
+	flagSet     *flag.FlagSet
+	KexReqFile  *os.File
+	KexRespFile *os.File
+	Debug       bool
 }
 
 func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 	flagSet := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	var caFile string
-	var certFile string
-	var keyFile string
-	flagSet.StringVar(&certFile, "cert-file", "", "Path to the certificate file for Transport Auth.")
-	flagSet.StringVar(&keyFile, "key-file", "", "Path to the key file for Transport Auth.")
-	flagSet.StringVar(&caFile, "ca-file", "", "Path to the CA file for Transport Auth.")
+	var kexReqFileName string
+	var kexRespFileName string
+	var debug bool
+	flagSet.StringVar(&kexReqFileName, "kex-req-file", "", "File name for the key exchange for Transport Auth.")
+	flagSet.StringVar(&kexRespFileName, "kex-resp-file", "", "File name for the key exchange for Transport Auth.")
+	flagSet.BoolVar(&debug, "debug", false, "Enable debug mode.")
 	flagSet.Parse(args)
-	certData, err := os.ReadFile(certFile)
+
+	kexReqFile, err := os.OpenFile(kexReqFileName, os.O_WRONLY, 0)
 	if err != nil {
 		return nil, err
 	}
-	keyData, err := os.ReadFile(keyFile)
-	if err != nil {
-		return nil, err
-	}
-	caData, err := os.ReadFile(caFile)
+	kexRespFile, err := os.OpenFile(kexRespFileName, os.O_RDONLY, 0)
 	if err != nil {
 		return nil, err
 	}
 	return &PluginCliFlags{
-		flagSet:  flagSet,
-		CAData:   caData,
-		CertData: certData,
-		KeyData:  keyData,
+		flagSet:     flagSet,
+		KexReqFile:  kexReqFile,
+		KexRespFile: kexRespFile,
+		Debug:       debug,
 	}, nil
+}
+
+func (f *PluginCliFlags) Close() error {
+	if err := f.KexReqFile.Close(); err != nil {
+		return err
+	}
+	if err := f.KexRespFile.Close(); err != nil {
+		return err
+	}
+	return nil
 }

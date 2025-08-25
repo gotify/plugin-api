@@ -871,10 +871,11 @@ const file_meta_proto_rawDesc = "" +
 	"\n" +
 	"CONFIGURER\x10\x02\x12\f\n" +
 	"\bSTORAGER\x10\x03\x12\r\n" +
-	"\tWEBHOOKER\x10\x042\xac\x01\n" +
+	"\tWEBHOOKER\x10\x042\xf0\x01\n" +
 	"\x06Plugin\x12.\n" +
 	"\rGetPluginInfo\x12\x16.google.protobuf.Empty\x1a\x05.Info\x126\n" +
-	"\tSetEnable\x12\x11.SetEnableRequest\x1a\x16.google.protobuf.Empty\x12:\n" +
+	"\tSetEnable\x12\x11.SetEnableRequest\x1a\x16.google.protobuf.Empty\x12B\n" +
+	"\x10GracefulShutdown\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12:\n" +
 	"\x0fRunUserInstance\x12\x14.UserInstanceRequest\x1a\x0f.InstanceUpdate0\x01B\x16Z\x14./generated/protobufb\x06proto3"
 
 var (
@@ -920,12 +921,14 @@ var file_meta_proto_depIdxs = []int32{
 	5,  // 9: Message.ExtrasEntry.value:type_name -> ExtrasValue
 	13, // 10: Plugin.GetPluginInfo:input_type -> google.protobuf.Empty
 	7,  // 11: Plugin.SetEnable:input_type -> SetEnableRequest
-	9,  // 12: Plugin.RunUserInstance:input_type -> UserInstanceRequest
-	4,  // 13: Plugin.GetPluginInfo:output_type -> Info
-	13, // 14: Plugin.SetEnable:output_type -> google.protobuf.Empty
-	8,  // 15: Plugin.RunUserInstance:output_type -> InstanceUpdate
-	13, // [13:16] is the sub-list for method output_type
-	10, // [10:13] is the sub-list for method input_type
+	13, // 12: Plugin.GracefulShutdown:input_type -> google.protobuf.Empty
+	9,  // 13: Plugin.RunUserInstance:input_type -> UserInstanceRequest
+	4,  // 14: Plugin.GetPluginInfo:output_type -> Info
+	13, // 15: Plugin.SetEnable:output_type -> google.protobuf.Empty
+	13, // 16: Plugin.GracefulShutdown:output_type -> google.protobuf.Empty
+	8,  // 17: Plugin.RunUserInstance:output_type -> InstanceUpdate
+	14, // [14:18] is the sub-list for method output_type
+	10, // [10:14] is the sub-list for method input_type
 	10, // [10:10] is the sub-list for extension type_name
 	10, // [10:10] is the sub-list for extension extendee
 	0,  // [0:10] is the sub-list for field type_name

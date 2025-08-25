@@ -2,14 +2,21 @@ package plugin
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/json"
+	"encoding/pem"
 	"errors"
+	"io"
 	"log"
 	"math"
 	"net/http"
 	"net/url"
 	"plugin"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -30,8 +37,8 @@ type GrpcDialer interface {
 // CompatV1 is a shim that acts like a plugin server and delegates request to
 // something that implements a V1-style API interface.
 type CompatV1 struct {
-	GetPluginInfo func() *papiv1.Info
-	GetInstance   func(user *papiv1.UserContext) (papiv1.Plugin, error)
+	GetPluginInfo func() papiv1.Info
+	GetInstance   func(user papiv1.UserContext) (papiv1.Plugin, error)
 }
 
 // NewCompatV1FromPlugin creates a new CompatV1 from a native Go plugin.
@@ -45,14 +52,14 @@ func NewCompatV1FromPlugin(plugin *plugin.Plugin) (*CompatV1, error) {
 		return nil, err
 	}
 
-	getPluginInfoChecked, ok := getPluginInfo.(func() *papiv1.Info)
+	getPluginInfoChecked, ok := getPluginInfo.(func() papiv1.Info)
 	if !ok {
 		return nil, errors.New("GetGotifyPluginInfo is not a function")
 	}
-	getInstanceCheckedWithErr, ok := getInstance.(func(user *papiv1.UserContext) (papiv1.Plugin, error))
+	getInstanceCheckedWithErr, ok := getInstance.(func(user papiv1.UserContext) (papiv1.Plugin, error))
 	if !ok {
-		if getInstanceCheckedWithoutErr, ok := getInstance.(func(user *papiv1.UserContext) papiv1.Plugin); ok {
-			getInstanceCheckedWithErr = func(user *papiv1.UserContext) (papiv1.Plugin, error) {
+		if getInstanceCheckedWithoutErr, ok := getInstance.(func(user papiv1.UserContext) papiv1.Plugin); ok {
+			getInstanceCheckedWithErr = func(user papiv1.UserContext) (papiv1.Plugin, error) {
 				return getInstanceCheckedWithoutErr(user), nil
 			}
 		} else {
@@ -69,62 +76,104 @@ func NewCompatV1FromPlugin(plugin *plugin.Plugin) (*CompatV1, error) {
 // CompatV1Shim is a shim that acts like a plugin server and delegates request to
 // something that implements a V1-style API interface.
 type CompatV1Shim struct {
+	shutdown     chan struct{}
+	shutdownOnce *sync.Once
 	mu           *sync.RWMutex
 	compatV1     *CompatV1
 	gin          *gin.Engine
 	instances    map[uint64]papiv1.Plugin
 	pluginServer *grpc.Server
-	pluginInfo   *papiv1.Info
+	pluginInfo   papiv1.Info
 	http.Server
 }
 
 // NewCompatV1Rpc creates a new CompatV1Shim server.
 func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error) {
 	pluginInfo := compatV1.GetPluginInfo()
-	tlsName := BuildPluginTLSName(purposePluginRPC, pluginInfo.Name)
 
 	cliFlags, err := ParsePluginCLIFlags(cliArgs)
 	if err != nil {
 		log.Fatalf("Failed to parse CLI flags: %v", err)
 	}
-	rootCAs := x509.NewCertPool()
-	caCert, err := x509.ParseCertificate(cliFlags.CAData)
-	if err != nil {
-		return nil, err
-	}
-	rootCAs.AddCert(caCert)
+	defer cliFlags.Close()
 
-	leafCert, err := x509.ParseCertificate(cliFlags.CertData)
+	rootCAs := x509.NewCertPool()
+
+	// perform key exchange through secure file descriptors
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, err
 	}
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: BuildPluginTLSName("*", pluginInfo.ModulePath),
+		},
+	}, priv)
+
+	if err != nil {
+		return nil, err
+	}
+	if _, err := cliFlags.KexReqFile.Write(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrBytes,
+	})); err != nil {
+		return nil, err
+	}
+
+	var certBytes []byte
+	var certificateChain []tls.Certificate
+	for {
+		var buf [2048]byte
+		n, err := cliFlags.KexRespFile.Read(buf[:])
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		certBytes = append(certBytes, buf[:n]...)
+
+		for block, rest := pem.Decode(certBytes); block != nil; block, rest = pem.Decode(rest) {
+			if block.Type == "CERTIFICATE" {
+				parsedCert, err := x509.ParseCertificate(block.Bytes)
+				if err != nil {
+					return nil, err
+				}
+				// Server signs with IsCA=false, so we can add all of them to the root CA pool without
+				// trusting things we shouldn't.
+				rootCAs.AddCert(parsedCert)
+				certificateChain = append(certificateChain, tls.Certificate{
+					Certificate: [][]byte{block.Bytes},
+					Leaf:        parsedCert,
+				})
+			}
+			certBytes = rest
+		}
+	}
+
+	certificateChain[0].PrivateKey = priv
 
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{
-			{
-				Certificate: [][]byte{cliFlags.CertData},
-				PrivateKey:  cliFlags.KeyData,
-				Leaf:        leafCert,
-			},
-			{
-				Certificate: [][]byte{caCert.Raw},
-			},
-		},
-		RootCAs:    rootCAs,
-		ServerName: tlsName,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  rootCAs,
+		Certificates: certificateChain,
+		RootCAs:      rootCAs,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    rootCAs,
 	}
 
 	rpcServer := grpc.NewServer()
+	if !cliFlags.Debug {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
-	gin := gin.Default()
+	ginEngine := gin.Default()
 
 	self := &CompatV1Shim{
+		shutdown:     make(chan struct{}),
+		shutdownOnce: &sync.Once{},
 		mu:           &sync.RWMutex{},
 		instances:    make(map[uint64]papiv1.Plugin),
 		compatV1:     compatV1,
-		gin:          gin,
+		gin:          ginEngine,
 		pluginServer: rpcServer,
 		pluginInfo:   pluginInfo,
 	}
@@ -155,7 +204,7 @@ func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pluginRpcHostName := BuildPluginTLSName(purposePluginRPC, h.pluginInfo.ModulePath)
+	pluginRpcHostName := BuildPluginTLSName(PurposePluginRPC, h.pluginInfo.ModulePath)
 
 	if r.TLS.ServerName == pluginRpcHostName {
 		if r.ProtoMajor != 2 {
@@ -171,7 +220,7 @@ func (h *CompatV1Shim) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pluginWebhookHostName := BuildPluginTLSName(purposePluginWebhook, h.pluginInfo.ModulePath)
+	pluginWebhookHostName := BuildPluginTLSName(PurposePluginWebhook, h.pluginInfo.ModulePath)
 	if r.TLS.ServerName == pluginWebhookHostName {
 		h.gin.ServeHTTP(w, r)
 		return
@@ -185,10 +234,25 @@ type shimV1MessageHandler struct {
 }
 
 func (h *shimV1MessageHandler) SendMessage(msg papiv1.Message) error {
+	extras := make(map[string]*protobuf.ExtrasValue)
+	for k, v := range msg.Extras {
+		jsonValue, err := json.Marshal(v)
+		if err != nil {
+			return err
+		}
+		extras[k] = &protobuf.ExtrasValue{
+			Value: &protobuf.ExtrasValue_Json{
+				Json: string(jsonValue),
+			},
+		}
+	}
 	return (*h.stream).Send(&protobuf.InstanceUpdate{
 		Update: &protobuf.InstanceUpdate_Message{
 			Message: &protobuf.Message{
-				Message: msg.Message,
+				Message:  msg.Message,
+				Title:    msg.Title,
+				Priority: int32(msg.Priority),
+				Extras:   extras,
 			},
 		},
 	})
@@ -200,6 +264,7 @@ type shimV1StorageHandler struct {
 }
 
 func (h *shimV1StorageHandler) Save(b []byte) error {
+	h.currentStorage = slices.Clone(b)
 	return (*h.stream).Send(&protobuf.InstanceUpdate{
 		Update: &protobuf.InstanceUpdate_Storage{
 			Storage: b,
@@ -208,7 +273,7 @@ func (h *shimV1StorageHandler) Save(b []byte) error {
 }
 
 func (h *shimV1StorageHandler) Load() (b []byte, err error) {
-	copy(h.currentStorage, b)
+	b = slices.Clone(h.currentStorage)
 	return
 }
 
@@ -294,9 +359,13 @@ func (s *compatV1ShimServer) ValidateAndSetConfig(ctx context.Context, req *prot
 		return nil, errors.New("instance not found")
 	}
 	if configurer, ok := instance.(papiv1.Configurer); ok {
-		var currentConfig interface{}
+		currentConfig := configurer.DefaultConfig()
 		if req.Config != nil {
-			yaml.Unmarshal([]byte(req.Config.Config), &currentConfig)
+			if reflect.TypeOf(currentConfig).Kind() == reflect.Pointer {
+				yaml.Unmarshal([]byte(req.Config.Config), currentConfig)
+			} else {
+				yaml.Unmarshal([]byte(req.Config.Config), &currentConfig)
+			}
 		}
 		if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
 			return &protobuf.ValidateAndSetConfigResponse{
@@ -316,11 +385,18 @@ func (s *compatV1ShimServer) ValidateAndSetConfig(ctx context.Context, req *prot
 	return nil, errors.New("instance does not implement configurer")
 }
 
+func (s *compatV1ShimServer) GracefulShutdown(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+	s.shim.shutdownOnce.Do(func() {
+		close(s.shim.shutdown)
+	})
+	return new(emptypb.Empty), nil
+}
+
 func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, stream protobuf.Plugin_RunUserInstanceServer) error {
 	if req.User.Id > math.MaxUint {
 		return errors.New("user id is too large")
 	}
-	instance, err := s.shim.compatV1.GetInstance(&papiv1.UserContext{
+	instance, err := s.shim.compatV1.GetInstance(papiv1.UserContext{
 		ID:    uint(req.User.Id),
 		Name:  req.User.Name,
 		Admin: req.User.Admin,
@@ -429,5 +505,6 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 	s.shim.instances[req.User.Id] = instance
 	s.shim.mu.Unlock()
 
+	<-s.shim.shutdown
 	return nil
 }

@@ -99,6 +99,9 @@ service Plugin {
 
     // set the enable state of a plugin instance
     rpc SetEnable(SetEnableRequest) returns (google.protobuf.Empty);
+
+    // graceful shutdown
+    rpc GracefulShutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
     
     // run a user instance
     rpc RunUserInstance(UserInstanceRequest) returns (stream InstanceUpdate);

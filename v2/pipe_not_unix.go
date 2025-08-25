@@ -2,12 +2,15 @@
 
 package plugin
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
-func NewListener() (net.Listener, error) {
+func NewListener() (net.Listener, string, error) {
 	listener, err := net.Listen("tcp", "[::1]:0")
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return listener, nil
+	return listener, fmt.Sprintf("dns://%s", listener.Addr().String()), nil
 }

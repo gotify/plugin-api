@@ -20,9 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Plugin_GetPluginInfo_FullMethodName   = "/Plugin/GetPluginInfo"
-	Plugin_SetEnable_FullMethodName       = "/Plugin/SetEnable"
-	Plugin_RunUserInstance_FullMethodName = "/Plugin/RunUserInstance"
+	Plugin_GetPluginInfo_FullMethodName    = "/Plugin/GetPluginInfo"
+	Plugin_SetEnable_FullMethodName        = "/Plugin/SetEnable"
+	Plugin_GracefulShutdown_FullMethodName = "/Plugin/GracefulShutdown"
+	Plugin_RunUserInstance_FullMethodName  = "/Plugin/RunUserInstance"
 )
 
 // PluginClient is the client API for Plugin service.
@@ -36,6 +37,8 @@ type PluginClient interface {
 	GetPluginInfo(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Info, error)
 	// set the enable state of a plugin instance
 	SetEnable(ctx context.Context, in *SetEnableRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// graceful shutdown
+	GracefulShutdown(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// run a user instance
 	RunUserInstance(ctx context.Context, in *UserInstanceRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[InstanceUpdate], error)
 }
@@ -62,6 +65,16 @@ func (c *pluginClient) SetEnable(ctx context.Context, in *SetEnableRequest, opts
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Plugin_SetEnable_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *pluginClient) GracefulShutdown(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Plugin_GracefulShutdown_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -98,6 +111,8 @@ type PluginServer interface {
 	GetPluginInfo(context.Context, *emptypb.Empty) (*Info, error)
 	// set the enable state of a plugin instance
 	SetEnable(context.Context, *SetEnableRequest) (*emptypb.Empty, error)
+	// graceful shutdown
+	GracefulShutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	// run a user instance
 	RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[InstanceUpdate]) error
 	mustEmbedUnimplementedPluginServer()
@@ -115,6 +130,9 @@ func (UnimplementedPluginServer) GetPluginInfo(context.Context, *emptypb.Empty) 
 }
 func (UnimplementedPluginServer) SetEnable(context.Context, *SetEnableRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetEnable not implemented")
+}
+func (UnimplementedPluginServer) GracefulShutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GracefulShutdown not implemented")
 }
 func (UnimplementedPluginServer) RunUserInstance(*UserInstanceRequest, grpc.ServerStreamingServer[InstanceUpdate]) error {
 	return status.Errorf(codes.Unimplemented, "method RunUserInstance not implemented")
@@ -176,6 +194,24 @@ func _Plugin_SetEnable_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Plugin_GracefulShutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PluginServer).GracefulShutdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Plugin_GracefulShutdown_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PluginServer).GracefulShutdown(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Plugin_RunUserInstance_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(UserInstanceRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -201,6 +237,10 @@ var Plugin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetEnable",
 			Handler:    _Plugin_SetEnable_Handler,
+		},
+		{
+			MethodName: "GracefulShutdown",
+			Handler:    _Plugin_GracefulShutdown_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

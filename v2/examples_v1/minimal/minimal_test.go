@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func testEchoImpl(t *testing.T, listener net.Listener, addr string) {
+func testMinimalImpl(t *testing.T, listener net.Listener, addr string) {
 	pluginInfo := GetGotifyPluginInfo()
 
 	client, err := transport.NewEphemeralTLSClient()
@@ -109,18 +109,18 @@ func testEchoImpl(t *testing.T, listener net.Listener, addr string) {
 	}
 }
 
-func TestEcho(t *testing.T) {
+func TestMinimal(t *testing.T) {
 	listener, addr, err := transport.NewListener()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testEchoImpl(t, listener, addr)
+	testMinimalImpl(t, listener, addr)
 }
 
-func TestEchoTCP(t *testing.T) {
+func TestMinimalTCP(t *testing.T) {
 	listener, addr, err := transport.NewTCPListener()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testEchoImpl(t, listener, addr)
+	testMinimalImpl(t, listener, addr)
 }

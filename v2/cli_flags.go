@@ -22,7 +22,9 @@ func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 	flagSet.StringVar(&kexReqFileName, "kex-req-file", "", "File name for the key exchange for Transport Auth. /proc/self/fd/* can be used to open a file descriptor cross platform.")
 	flagSet.StringVar(&kexRespFileName, "kex-resp-file", "", "File name for the key exchange for Transport Auth. /proc/self/fd/* can be used to open a file descriptor cross platform.")
 	flagSet.BoolVar(&debug, "debug", false, "Enable debug mode.")
-	flagSet.Parse(args)
+	if err := flagSet.Parse(args); err != nil {
+		return nil, err
+	}
 
 	var kexReqFile *os.File
 	var kexRespFile *os.File
@@ -42,10 +44,10 @@ func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 	}
 	if fdNumber, found := strings.CutPrefix(kexRespFileName, "/proc/self/fd/"); found {
 		fdNumber, err := strconv.ParseUint(fdNumber, 10, 64)
-		kexRespFile = os.NewFile(uintptr(fdNumber), kexRespFileName)
 		if err != nil {
 			return nil, err
 		}
+		kexRespFile = os.NewFile(uintptr(fdNumber), kexRespFileName)
 	} else {
 		kexRespFile, err = os.OpenFile(kexRespFileName, os.O_RDONLY, 0)
 		if err != nil {
@@ -53,9 +55,6 @@ func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 		}
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	return &PluginCliFlags{
 		flagSet:     flagSet,
 		KexReqFile:  kexReqFile,

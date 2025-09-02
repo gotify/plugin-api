@@ -6,7 +6,7 @@ import (
 )
 
 func NewTCPListener() (net.Listener, string, error) {
-	listener, err := net.Listen("tcp", "[::1]:0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, "", err
 	}

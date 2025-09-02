@@ -23,7 +23,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/gin-gonic/gin"
 	papiv1 "github.com/gotify/plugin-api"

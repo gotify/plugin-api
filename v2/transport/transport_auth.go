@@ -8,6 +8,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -102,27 +103,25 @@ func (s *EphemeralTLSClient) SignPluginCSR(moduleName string, csr *x509.Certific
 
 func (s *EphemeralTLSClient) Kex(req io.Reader, resp io.Writer) error {
 	var csr *x509.CertificateRequest
-	var csrBytes []byte
-	for csr == nil {
-		var buf [2048]byte
-		n, err := req.Read(buf[:])
-		if err != nil {
-			return err
-		}
-		csrBytes = append(csrBytes, buf[:n]...)
-		block, _ := pem.Decode(csrBytes)
-		if block == nil {
-			continue
-		}
 
+	if err := IteratePEMFile(req, func(block *pem.Block) (continueIterate bool, err error) {
 		if block.Type == "CERTIFICATE REQUEST" {
-			csrParsed, err := x509.ParseCertificateRequest(block.Bytes)
+			csr, err = x509.ParseCertificateRequest(block.Bytes)
 			if err != nil {
-				return err
+				return false, err
 			}
-			csr = csrParsed
+
+			return false, nil
 		}
+		return true, nil
+	}); err != nil {
+		return err
 	}
+
+	if csr == nil {
+		return errors.New("no certificate request found in kex request file")
+	}
+
 	dnsName := csr.Subject.CommonName
 	certBytes, err := s.SignCSR(dnsName, csr)
 	if err != nil {
@@ -165,6 +164,9 @@ func NewEphemeralTLSClient() (*EphemeralTLSClient, error) {
 		IsCA: true,
 	}
 	caCertBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caPub, caPriv)
+	if err != nil {
+		return nil, err
+	}
 	caCert, err := x509.ParseCertificate(caCertBytes)
 	if err != nil {
 		return nil, err
@@ -203,7 +205,6 @@ func NewEphemeralTLSClient() (*EphemeralTLSClient, error) {
 			},
 			{
 				Certificate: [][]byte{caCertBytes},
-				PrivateKey:  caPriv,
 			},
 		},
 		RootCAs: certPool,

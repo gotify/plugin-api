@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"io"
 	"log"
 	"math"
 	"net/http"
@@ -120,35 +119,28 @@ func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error)
 		return nil, err
 	}
 
-	var certBytes []byte
 	var certificateChain []tls.Certificate
-	for {
-		var buf [2048]byte
-		n, err := cliFlags.KexRespFile.Read(buf[:])
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-		certBytes = append(certBytes, buf[:n]...)
 
-		for block, rest := pem.Decode(certBytes); block != nil; block, rest = pem.Decode(rest) {
-			if block.Type == "CERTIFICATE" {
-				parsedCert, err := x509.ParseCertificate(block.Bytes)
-				if err != nil {
-					return nil, err
-				}
-				// Server signs with IsCA=false, so we can add all of them to the root CA pool without
-				// trusting things we shouldn't.
-				rootCAs.AddCert(parsedCert)
-				certificateChain = append(certificateChain, tls.Certificate{
-					Certificate: [][]byte{block.Bytes},
-					Leaf:        parsedCert,
-				})
+	if err := transport.IteratePEMFile(cliFlags.KexRespFile, func(block *pem.Block) (continueIterate bool, err error) {
+		if block.Type == "CERTIFICATE" {
+			parsedCert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return false, err
 			}
-			certBytes = rest
+			rootCAs.AddCert(parsedCert)
+			certificateChain = append(certificateChain, tls.Certificate{
+				Certificate: [][]byte{block.Bytes},
+				Leaf:        parsedCert,
+			})
+			return true, nil
 		}
+		return true, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(certificateChain) == 0 {
+		return nil, errors.New("no certificate chain found in kex response file")
 	}
 
 	certificateChain[0].PrivateKey = priv

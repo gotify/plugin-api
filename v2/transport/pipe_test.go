@@ -20,11 +20,13 @@ func TestPipe(t *testing.T) {
 	}
 
 	var family string
-	if urlParsed.Scheme == "unix" {
+
+	switch urlParsed.Scheme {
+	case "unix":
 		family = "unix"
-	} else if urlParsed.Scheme == "dns" {
+	case "dns":
 		family = "tcp"
-	} else {
+	default:
 		t.Fatalf("unsupported address URL scheme: %s", urlParsed.Scheme)
 	}
 

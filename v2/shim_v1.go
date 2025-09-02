@@ -35,8 +35,7 @@ type GrpcDialer interface {
 	Dial(ctx context.Context) (*grpc.ClientConn, error)
 }
 
-// CompatV1 is a shim that acts like a plugin server and delegates request to
-// something that implements a V1-style API interface.
+// CompatV1 is an API interface that is compatible with the V1 API.
 type CompatV1 struct {
 	GetPluginInfo func() papiv1.Info
 	GetInstance   func(user papiv1.UserContext) (papiv1.Plugin, error)
@@ -260,11 +259,14 @@ func (h *shimV1MessageHandler) SendMessage(msg papiv1.Message) error {
 }
 
 type shimV1StorageHandler struct {
+	mutex          *sync.RWMutex
 	currentStorage []byte
 	stream         *protobuf.Plugin_RunUserInstanceServer
 }
 
 func (h *shimV1StorageHandler) Save(b []byte) error {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
 	h.currentStorage = slices.Clone(b)
 	return (*h.stream).Send(&protobuf.InstanceUpdate{
 		Update: &protobuf.InstanceUpdate_Storage{
@@ -274,6 +276,8 @@ func (h *shimV1StorageHandler) Save(b []byte) error {
 }
 
 func (h *shimV1StorageHandler) Load() (b []byte, err error) {
+	h.mutex.RLock()
+	defer h.mutex.RUnlock()
 	b = slices.Clone(h.currentStorage)
 	return
 }
@@ -283,6 +287,16 @@ type compatV1ShimServer struct {
 	protobuf.UnimplementedPluginServer
 	protobuf.UnimplementedDisplayerServer
 	protobuf.UnimplementedConfigurerServer
+}
+
+func (s *CompatV1Shim) getInstanceByUserId(userId uint64) (papiv1.Plugin, error) {
+	s.mu.RLock()
+	instance, ok := s.instances[userId]
+	s.mu.RUnlock()
+	if !ok {
+		return nil, errors.New("instance not found")
+	}
+	return instance, nil
 }
 
 func (s *compatV1ShimServer) GetPluginInfo(ctx context.Context, req *emptypb.Empty) (*protobuf.Info, error) {
@@ -312,11 +326,9 @@ func (s *compatV1ShimServer) SetEnable(ctx context.Context, req *protobuf.SetEna
 }
 
 func (s *compatV1ShimServer) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
-	s.shim.mu.RLock()
-	instance, ok := s.shim.instances[req.User.Id]
-	s.shim.mu.RUnlock()
-	if !ok {
-		return nil, errors.New("instance not found")
+	instance, err := s.shim.getInstanceByUserId(req.User.Id)
+	if err != nil {
+		return nil, err
 	}
 	if displayer, ok := instance.(papiv1.Displayer); ok {
 		location, err := url.Parse(req.Location)
@@ -333,11 +345,9 @@ func (s *compatV1ShimServer) Display(ctx context.Context, req *protobuf.DisplayR
 }
 
 func (s *compatV1ShimServer) DefaultConfig(ctx context.Context, req *protobuf.DefaultConfigRequest) (*protobuf.Config, error) {
-	s.shim.mu.RLock()
-	instance, ok := s.shim.instances[req.User.Id]
-	s.shim.mu.RUnlock()
-	if !ok {
-		return nil, errors.New("instance not found")
+	instance, err := s.shim.getInstanceByUserId(req.User.Id)
+	if err != nil {
+		return nil, err
 	}
 	if configurer, ok := instance.(papiv1.Configurer); ok {
 		defaultConfig := configurer.DefaultConfig()
@@ -353,11 +363,9 @@ func (s *compatV1ShimServer) DefaultConfig(ctx context.Context, req *protobuf.De
 }
 
 func (s *compatV1ShimServer) ValidateAndSetConfig(ctx context.Context, req *protobuf.ValidateAndSetConfigRequest) (*protobuf.ValidateAndSetConfigResponse, error) {
-	s.shim.mu.RLock()
-	instance, ok := s.shim.instances[req.User.Id]
-	s.shim.mu.RUnlock()
-	if !ok {
-		return nil, errors.New("instance not found")
+	instance, err := s.shim.getInstanceByUserId(req.User.Id)
+	if err != nil {
+		return nil, err
 	}
 	if configurer, ok := instance.(papiv1.Configurer); ok {
 		currentConfig := configurer.DefaultConfig()
@@ -487,7 +495,9 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_CONFIGURER) {
 			currentConfig := configurer.DefaultConfig()
 			if req.Config != nil {
-				yaml.Unmarshal(req.Config, &currentConfig)
+				if err := yaml.Unmarshal(req.Config, &currentConfig); err != nil {
+					return err
+				}
 				if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
 					return err
 				}
@@ -499,6 +509,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 
 	if storager, ok := instance.(papiv1.Storager); ok {
 		storageHandler := &shimV1StorageHandler{
+			mutex:          &sync.RWMutex{},
 			currentStorage: req.Storage,
 			stream:         &stream,
 		}

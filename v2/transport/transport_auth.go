@@ -33,9 +33,8 @@ func BuildPluginTLSName(purpose string, moduleName string) string {
 }
 
 type EphemeralTLSClient struct {
-	caCert    *x509.Certificate
-	caPriv    ed25519.PrivateKey
-	tlsConfig *tls.Config
+	caCert *x509.Certificate
+	caPriv ed25519.PrivateKey
 }
 
 func (s *EphemeralTLSClient) createCertPool() *x509.CertPool {
@@ -171,47 +170,8 @@ func NewEphemeralTLSClient() (*EphemeralTLSClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	clientPub, clientPriv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	clientCertTemplate := &x509.Certificate{
-		BasicConstraintsValid: true,
-		Subject: pkix.Name{
-			CommonName: ServerTLSName,
-		},
-		DNSNames: []string{
-			ServerTLSName,
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 365),
-		KeyUsage:  x509.KeyUsageDigitalSignature,
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageClientAuth,
-		},
-		IsCA: false,
-	}
-	clientCertBytes, err := x509.CreateCertificate(rand.Reader, clientCertTemplate, caCert, clientPub, caPriv)
-	if err != nil {
-		return nil, err
-	}
-	certPool := x509.NewCertPool()
-	certPool.AddCert(caCert)
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{
-			{
-				Certificate: [][]byte{clientCertBytes},
-				PrivateKey:  clientPriv,
-			},
-			{
-				Certificate: [][]byte{caCertBytes},
-			},
-		},
-		RootCAs: certPool,
-	}
 	return &EphemeralTLSClient{
-		caCert:    caCert,
-		caPriv:    caPriv,
-		tlsConfig: tlsConfig,
+		caCert: caCert,
+		caPriv: caPriv,
 	}, nil
 }

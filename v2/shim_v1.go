@@ -408,7 +408,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 
 	// enable supported capabilities
 	if _, ok := instance.(papiv1.Displayer); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_DISPLAYER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_DISPLAYER) {
 			if err := stream.Send(&protobuf.InstanceUpdate{
 				Update: &protobuf.InstanceUpdate_Capable{
 					Capable: protobuf.Capability_DISPLAYER,
@@ -421,7 +421,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 		}
 	}
 	if _, ok := instance.(papiv1.Messenger); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_MESSENGER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_MESSENGER) {
 			if err := stream.Send(&protobuf.InstanceUpdate{
 				Update: &protobuf.InstanceUpdate_Capable{
 					Capable: protobuf.Capability_MESSENGER,
@@ -434,7 +434,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 		}
 	}
 	if _, ok := instance.(papiv1.Configurer); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_CONFIGURER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_CONFIGURER) {
 			if err := stream.Send(&protobuf.InstanceUpdate{
 				Update: &protobuf.InstanceUpdate_Capable{
 					Capable: protobuf.Capability_CONFIGURER,
@@ -447,7 +447,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 		}
 	}
 	if _, ok := instance.(papiv1.Storager); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_STORAGER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_STORAGER) {
 			if err := stream.Send(&protobuf.InstanceUpdate{
 				Update: &protobuf.InstanceUpdate_Capable{
 					Capable: protobuf.Capability_STORAGER,
@@ -460,7 +460,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 		}
 	}
 	if _, ok := instance.(papiv1.Webhooker); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_WEBHOOKER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_WEBHOOKER) {
 			if err := stream.Send(&protobuf.InstanceUpdate{
 				Update: &protobuf.InstanceUpdate_Capable{
 					Capable: protobuf.Capability_WEBHOOKER,
@@ -474,7 +474,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 	}
 
 	if messenger, ok := instance.(papiv1.Messenger); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_MESSENGER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_MESSENGER) {
 			messenger.SetMessageHandler(&shimV1MessageHandler{
 				stream: &stream,
 			})
@@ -484,7 +484,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 	}
 
 	if configurer, ok := instance.(papiv1.Configurer); ok {
-		if slices.Contains(req.ServerVersion.Capabilities, protobuf.Capability_CONFIGURER) {
+		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_CONFIGURER) {
 			currentConfig := configurer.DefaultConfig()
 			if req.Config != nil {
 				if err := yaml.Unmarshal(req.Config, &currentConfig); err != nil {

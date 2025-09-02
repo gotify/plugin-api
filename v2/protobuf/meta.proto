@@ -71,8 +71,8 @@ message InstanceUpdate {
 }
 
 message UserInstanceRequest {
-    // the server version info
-    ServerVersionInfo serverVersion = 1;
+    // the server info
+    ServerInfo serverInfo = 1;
     // the user context
     UserContext user = 2;
     // the webhook base path
@@ -83,7 +83,7 @@ message UserInstanceRequest {
     optional bytes storage = 5;
 }
 
-message ServerVersionInfo {
+message ServerInfo {
     string version = 1;
     string commit = 2;
     string buildDate = 3;

@@ -28,8 +28,8 @@ func (s *dummyInfraServer) GetPluginInfo(ctx context.Context, req *emptypb.Empty
 	}, nil
 }
 
-func (s *dummyInfraServer) GetServerVersion(ctx context.Context, req *emptypb.Empty) (*protobuf.ServerVersionInfo, error) {
-	return &protobuf.ServerVersionInfo{
+func (s *dummyInfraServer) GetServerVersion(ctx context.Context, req *emptypb.Empty) (*protobuf.ServerInfo, error) {
+	return &protobuf.ServerInfo{
 		Version:   "test",
 		Commit:    "test",
 		BuildDate: time.Now().Format(time.RFC3339),

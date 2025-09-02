@@ -95,7 +95,7 @@ func TestEcho(t *testing.T) {
 			Name:  testUser.Name,
 			Admin: testUser.Admin,
 		},
-		ServerVersion: &protobuf.ServerVersionInfo{
+		ServerInfo: &protobuf.ServerInfo{
 			Version: "1.0.0",
 			Capabilities: []protobuf.Capability{
 				protobuf.Capability_DISPLAYER,

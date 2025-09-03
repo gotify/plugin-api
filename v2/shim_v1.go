@@ -2,13 +2,9 @@ package plugin
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"log"
 	"math"
@@ -105,60 +101,14 @@ type CompatV1Shim struct {
 func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error) {
 	pluginInfo := compatV1.GetPluginInfo()
 
-	cliFlags, err := ParsePluginCLIFlags(cliArgs)
+	cli, err := ParsePluginCli(cliArgs)
 	if err != nil {
 		log.Fatalf("Failed to parse CLI flags: %v", err)
 	}
-	defer cliFlags.Close()
+	defer cli.Close()
 
 	rootCAs := x509.NewCertPool()
-
-	// perform key exchange through secure file descriptors
-	_, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
-		Subject: pkix.Name{
-			CommonName: transport.BuildPluginTLSName("*", pluginInfo.ModulePath),
-		},
-	}, priv)
-
-	if err != nil {
-		return nil, err
-	}
-	if _, err := cliFlags.KexReqFile.Write(pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE REQUEST",
-		Bytes: csrBytes,
-	})); err != nil {
-		return nil, err
-	}
-
-	var certificateChain []tls.Certificate
-
-	if err := transport.IteratePEMFile(cliFlags.KexRespFile, func(block *pem.Block) (continueIterate bool, err error) {
-		if block.Type == "CERTIFICATE" {
-			parsedCert, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return false, err
-			}
-			rootCAs.AddCert(parsedCert)
-			certificateChain = append(certificateChain, tls.Certificate{
-				Certificate: [][]byte{block.Bytes},
-				Leaf:        parsedCert,
-			})
-			return true, nil
-		}
-		return true, nil
-	}); err != nil {
-		return nil, err
-	}
-
-	if len(certificateChain) == 0 {
-		return nil, errors.New("no certificate chain found in kex response file")
-	}
-
-	certificateChain[0].PrivateKey = priv
+	certificateChain, err := cli.Kex(pluginInfo.ModulePath, rootCAs)
 
 	tlsConfig := &tls.Config{
 		Certificates: certificateChain,
@@ -171,7 +121,7 @@ func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error)
 		MinTime:             httpTimeout,
 		PermitWithoutStream: true,
 	}), grpc.ConnectionTimeout(httpTimeout))
-	if !cliFlags.Debug {
+	if !cli.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
 

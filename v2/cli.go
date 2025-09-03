@@ -1,21 +1,32 @@
 package plugin
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"errors"
 	"flag"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/gotify/plugin-api/v2/transport"
 )
 
-type PluginCliFlags struct {
+// / PluginCli implements the CLI interface for a Gotify plugin.
+type PluginCli struct {
 	flagSet     *flag.FlagSet
 	KexReqFile  *os.File
 	KexRespFile *os.File
 	Debug       bool
 }
 
-func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
+// ParsePluginCli parses the CLI arguments and returns a PluginCli instance.
+func ParsePluginCli(args []string) (*PluginCli, error) {
 	flagSet := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	var kexReqFileName string
 	var kexRespFileName string
@@ -56,7 +67,7 @@ func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 		}
 	}
 
-	return &PluginCliFlags{
+	return &PluginCli{
 		flagSet:     flagSet,
 		KexReqFile:  kexReqFile,
 		KexRespFile: kexRespFile,
@@ -64,7 +75,60 @@ func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 	}, nil
 }
 
-func (f *PluginCliFlags) Close() error {
+// Kex performs the key exchange through secure file descriptors provided in the arguments.
+func (f *PluginCli) Kex(modulePath string, certPool *x509.CertPool) (certChain []tls.Certificate, err error) {
+	// perform key exchange through secure file descriptors
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: transport.BuildPluginTLSName("*", modulePath),
+		},
+	}, priv)
+
+	if err != nil {
+		return nil, err
+	}
+	if _, err := f.KexReqFile.Write(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrBytes,
+	})); err != nil {
+		return nil, err
+	}
+
+	var certificateChain []tls.Certificate
+
+	if err := transport.IteratePEMFile(f.KexRespFile, func(block *pem.Block) (continueIterate bool, err error) {
+		if block.Type == "CERTIFICATE" {
+			parsedCert, err := x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return false, err
+			}
+			certPool.AddCert(parsedCert)
+			certificateChain = append(certificateChain, tls.Certificate{
+				Certificate: [][]byte{block.Bytes},
+				Leaf:        parsedCert,
+			})
+			return true, nil
+		}
+		return true, nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if len(certificateChain) == 0 {
+		return nil, errors.New("no certificate chain found in kex response file")
+	}
+
+	certificateChain[0].PrivateKey = priv
+
+	return certificateChain, nil
+}
+
+// Close closes any file descriptors associated with the PluginCli instance.
+func (f *PluginCli) Close() error {
 	if err := f.KexReqFile.Close(); err != nil {
 		return err
 	}

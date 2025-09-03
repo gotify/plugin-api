@@ -39,11 +39,13 @@ type GrpcDialer interface {
 
 var (
 	httpTimeout = 10 * time.Second
+	pingRate    = 4 * time.Second
 )
 
 func init() {
 	if testing.Testing() {
 		httpTimeout = 100 * time.Millisecond
+		pingRate = 10 * time.Millisecond
 	}
 }
 
@@ -545,12 +547,7 @@ func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, 
 		s.shim.mu.Unlock()
 	})
 
-	ticker := time.NewTicker(15 * time.Second)
-
-	if testing.Testing() {
-		ticker.Stop()
-		ticker = time.NewTicker(5 * time.Millisecond)
-	}
+	ticker := time.NewTicker(pingRate)
 
 	defer ticker.Stop()
 	for {

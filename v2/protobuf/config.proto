@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "meta.proto";
+
+option go_package = "./generated/protobuf";
+
+message Config {
+    // The YAML configuration data.
+    string config = 1;
+}
+
+message DefaultConfigRequest {
+    // The user context the configuration belongs to.
+    UserContext user = 1;
+}
+
+message ValidateAndSetConfigRequest {
+    // The user context the configuration belongs to.
+    UserContext user = 1;
+    // The YAML configuration data.
+    Config config = 2;
+}
+
+message ValidateAndSetConfigResponse {
+    // The response to the request.
+    oneof response {
+        // The success response.
+        google.protobuf.Empty success = 1;
+        // The validation error response.
+        Error validation_error = 2;
+    }
+}
+
+// A service that allows plugins to be configured through the Gotify server.
+service Configurer {
+    rpc DefaultConfig(DefaultConfigRequest) returns (Config);
+    rpc ValidateAndSetConfig(ValidateAndSetConfigRequest) returns (ValidateAndSetConfigResponse);
+}

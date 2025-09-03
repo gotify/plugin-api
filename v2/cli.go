@@ -106,7 +106,9 @@ func (f *PluginCli) Kex(modulePath string, certPool *x509.CertPool) (certChain [
 			if err != nil {
 				return false, err
 			}
-			certPool.AddCert(parsedCert)
+			if certPool != nil {
+				certPool.AddCert(parsedCert)
+			}
 			certificateChain = append(certificateChain, tls.Certificate{
 				Certificate: [][]byte{block.Bytes},
 				Leaf:        parsedCert,

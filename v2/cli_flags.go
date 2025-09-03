@@ -3,6 +3,7 @@ package plugin
 import (
 	"flag"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -19,9 +20,9 @@ func ParsePluginCLIFlags(args []string) (*PluginCliFlags, error) {
 	var kexReqFileName string
 	var kexRespFileName string
 	var debug bool
-	flagSet.StringVar(&kexReqFileName, "kex-req-file", "", "File name for the key exchange for Transport Auth. /proc/self/fd/* can be used to open a file descriptor cross platform.")
-	flagSet.StringVar(&kexRespFileName, "kex-resp-file", "", "File name for the key exchange for Transport Auth. /proc/self/fd/* can be used to open a file descriptor cross platform.")
-	flagSet.BoolVar(&debug, "debug", false, "Enable debug mode.")
+	flagSet.StringVar(&kexReqFileName, "kex-req-file", os.Getenv("GOTIFY_PLUGIN_KEX_REQ_FILE"), "File name for the key exchange for Transport Auth. /proc/self/fd/* can be used to open a file descriptor cross platform.")
+	flagSet.StringVar(&kexRespFileName, "kex-resp-file", os.Getenv("GOTIFY_PLUGIN_KEX_RESP_FILE"), "File name for the key exchange for Transport Auth. /proc/self/fd/* can be used to open a file descriptor cross platform.")
+	flagSet.BoolVar(&debug, "debug", slices.Contains([]string{"true", "1", "yes", "y"}, strings.ToLower(os.Getenv("GOTIFY_PLUGIN_DEBUG"))), "Enable debug mode.")
 	if err := flagSet.Parse(args); err != nil {
 		return nil, err
 	}

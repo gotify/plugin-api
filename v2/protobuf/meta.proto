@@ -46,11 +46,6 @@ message Message {
     map<string, ExtrasValue> extras = 4;
 }
 
-message SetEnableRequest {
-    UserContext user = 1;
-    bool enable = 2;
-}
-
 enum Capability {
     DISPLAYER = 0;
     MESSENGER = 1;
@@ -61,12 +56,14 @@ enum Capability {
 
 message InstanceUpdate {
     oneof update {
+        // ping the server to keep the connection alive
+        google.protobuf.Empty ping = 1;
         // enable support for a feature, must be one of the capabilities supported by the server
-        Capability capable = 1;
+        Capability capable = 2;
         // send a message to the user
-        Message message = 2;
+        Message message = 3;
         // update persistent storage
-        bytes storage = 3;
+        bytes storage = 4;
     }
 }
 
@@ -96,9 +93,6 @@ message ServerInfo {
 service Plugin {
     // get the plugin info
     rpc GetPluginInfo(google.protobuf.Empty) returns (Info);
-
-    // set the enable state of a plugin instance
-    rpc SetEnable(SetEnableRequest) returns (google.protobuf.Empty);
 
     // graceful shutdown
     rpc GracefulShutdown(google.protobuf.Empty) returns (google.protobuf.Empty);

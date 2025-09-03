@@ -7,17 +7,22 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	papiv1 "github.com/gotify/plugin-api"
 	"github.com/gotify/plugin-api/v2"
 	"github.com/gotify/plugin-api/v2/generated/protobuf"
 	"github.com/gotify/plugin-api/v2/transport"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func testMinimalImpl(t *testing.T, listener net.Listener, addr string) {
+	assert := assert.New(t)
+
 	pluginInfo := GetGotifyPluginInfo()
 
 	client, err := transport.NewEphemeralTLSClient()
@@ -39,51 +44,37 @@ func testMinimalImpl(t *testing.T, listener net.Listener, addr string) {
 		client.Kex(reqFileRx, respFileTx)
 	}()
 
+	var thisInstance *Plugin
+	instanceInitialized := make(chan struct{})
+
 	compatV1, err := plugin.NewCompatV1Rpc(&plugin.CompatV1{
 		GetPluginInfo: GetGotifyPluginInfo,
 		GetInstance: func(user papiv1.UserContext) (papiv1.Plugin, error) {
-			return NewGotifyPluginInstance(user), nil
+			thisInstance = NewGotifyPluginInstance(user).(*Plugin)
+			defer close(instanceInitialized)
+			return thisInstance, nil
 		},
 	}, []string{
 		"-kex-req-file", fmt.Sprintf("/proc/self/fd/%d", reqTx),
 		"-kex-resp-file", fmt.Sprintf("/proc/self/fd/%d", respRx),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(err)
 
 	go func() {
 		compatV1.ServeTLS(listener, "", "")
 	}()
 
-	rpcClient, err := grpc.NewClient(addr, grpc.WithTransportCredentials(credentials.NewTLS(client.ClientTLSConfig(pluginInfo.ModulePath))))
-	if err != nil {
-		t.Fatal(err)
-	}
+	rpcClient, err := grpc.NewClient(addr, grpc.WithTransportCredentials(credentials.NewTLS(client.ClientTLSConfig(pluginInfo.ModulePath))), grpc.WithKeepaliveParams(keepalive.ClientParameters{
+		Time:                10 * time.Millisecond,
+		PermitWithoutStream: true,
+	}))
+	assert.NoError(err)
 
 	pluginClient := protobuf.NewPluginClient(rpcClient)
 	version, err := pluginClient.GetPluginInfo(context.Background(), &emptypb.Empty{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if version.Name != pluginInfo.Name {
-		t.Fatal("expected ", pluginInfo.Name, " got ", version.Name)
-	}
-	if version.Version != pluginInfo.Version {
-		t.Fatal("expected ", pluginInfo.Version, " got ", version.Version)
-	}
-
-	pluginClient.SetEnable(context.Background(), &protobuf.SetEnableRequest{
-		User: &protobuf.UserContext{
-			Id:    uint64(1),
-			Name:  "test",
-			Admin: false,
-		},
-		Enable: true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(err)
+	assert.Equal(pluginInfo.Name, version.Name)
+	assert.Equal(pluginInfo.Version, version.Version)
 
 	stream, err := pluginClient.RunUserInstance(context.Background(), &protobuf.UserInstanceRequest{
 		User: &protobuf.UserContext{
@@ -92,12 +83,13 @@ func testMinimalImpl(t *testing.T, listener net.Listener, addr string) {
 			Admin: false,
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(err)
+
+	assert.NoError(stream.CloseSend())
+	<-instanceInitialized
+	assert.True(thisInstance.enabled, "plugin should be enabled after connect")
 
 	pluginClient.GracefulShutdown(context.Background(), &emptypb.Empty{})
-	stream.CloseSend()
 	for {
 		_, err := stream.Recv()
 		if err != nil {
@@ -105,6 +97,45 @@ func testMinimalImpl(t *testing.T, listener net.Listener, addr string) {
 				break
 			}
 			t.Fatal(err)
+		}
+	}
+
+	streamHang, err := pluginClient.RunUserInstance(context.Background(), &protobuf.UserInstanceRequest{
+		User: &protobuf.UserContext{
+			Id:    uint64(1),
+			Name:  "test",
+			Admin: false,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := streamHang.CloseSend(); err != nil {
+		t.Fatal(err)
+	}
+	_, err = streamHang.Recv()
+	assert.Error(err, "expected error when not sending keepalive")
+	assert.False(thisInstance.enabled, "plugin should be disabled after hang")
+
+	streamReentrant, err := pluginClient.RunUserInstance(context.Background(), &protobuf.UserInstanceRequest{
+		User: &protobuf.UserContext{
+			Id:    uint64(1),
+			Name:  "test",
+			Admin: false,
+		},
+	})
+	assert.NoError(err)
+	pluginClient.GracefulShutdown(context.Background(), &emptypb.Empty{})
+	if err := streamReentrant.CloseSend(); err != nil {
+		assert.NoError(err)
+	}
+	for {
+		_, err := streamReentrant.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			assert.NoError(err)
 		}
 	}
 }

@@ -19,8 +19,11 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"testing"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"gopkg.in/yaml.v3"
 
@@ -32,6 +35,16 @@ import (
 
 type GrpcDialer interface {
 	Dial(ctx context.Context) (*grpc.ClientConn, error)
+}
+
+var (
+	httpTimeout = 10 * time.Second
+)
+
+func init() {
+	if testing.Testing() {
+		httpTimeout = 100 * time.Millisecond
+	}
 }
 
 // CompatV1 is an API interface that is compatible with the V1 API.
@@ -152,7 +165,10 @@ func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error)
 		ClientCAs:    rootCAs,
 	}
 
-	rpcServer := grpc.NewServer()
+	rpcServer := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+		MinTime:             httpTimeout,
+		PermitWithoutStream: true,
+	}), grpc.ConnectionTimeout(httpTimeout))
 	if !cliFlags.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -182,9 +198,12 @@ func NewCompatV1Rpc(compatV1 *CompatV1, cliArgs []string) (*CompatV1Shim, error)
 	protocols.SetHTTP1(true)
 	protocols.SetHTTP2(true)
 	self.Server = http.Server{
-		Handler:   self,
-		TLSConfig: tlsConfig,
-		Protocols: protocols,
+		Handler:           self,
+		TLSConfig:         tlsConfig,
+		Protocols:         protocols,
+		ReadTimeout:       httpTimeout,
+		ReadHeaderTimeout: httpTimeout,
+		WriteTimeout:      httpTimeout,
 	}
 
 	return self, nil
@@ -303,20 +322,6 @@ func (s *compatV1ShimServer) GetPluginInfo(ctx context.Context, req *emptypb.Emp
 	}, nil
 }
 
-func (s *compatV1ShimServer) SetEnable(ctx context.Context, req *protobuf.SetEnableRequest) (*emptypb.Empty, error) {
-	s.shim.mu.RLock()
-	instance, ok := s.shim.instances[req.User.Id]
-	s.shim.mu.RUnlock()
-	if !ok {
-		return nil, errors.New("instance not found")
-	}
-	if req.Enable {
-		return new(emptypb.Empty), instance.Enable()
-	} else {
-		return new(emptypb.Empty), instance.Disable()
-	}
-}
-
 func (s *compatV1ShimServer) Display(ctx context.Context, req *protobuf.DisplayRequest) (*protobuf.DisplayResponse, error) {
 	instance, err := s.shim.getInstanceByUserId(req.User.Id)
 	if err != nil {
@@ -390,135 +395,176 @@ func (s *compatV1ShimServer) GracefulShutdown(ctx context.Context, req *emptypb.
 	s.shim.shutdownOnce.Do(func() {
 		close(s.shim.shutdown)
 	})
-	return new(emptypb.Empty), nil
+	return &emptypb.Empty{}, nil
 }
 
 func (s *compatV1ShimServer) RunUserInstance(req *protobuf.UserInstanceRequest, stream protobuf.Plugin_RunUserInstanceServer) error {
 	if req.User.Id > math.MaxUint {
 		return errors.New("user id is too large")
 	}
-	instance, err := s.shim.compatV1.GetInstance(papiv1.UserContext{
-		ID:    uint(req.User.Id),
-		Name:  req.User.Name,
-		Admin: req.User.Admin,
+
+	unlockOnce := new(sync.Once)
+
+	s.shim.mu.Lock()
+
+	defer unlockOnce.Do(func() {
+		s.shim.mu.Unlock()
 	})
-	if err != nil {
+
+	instance, alreadyRunning := s.shim.instances[req.User.Id]
+
+	if !alreadyRunning {
+		var err error
+		instance, err = s.shim.compatV1.GetInstance(papiv1.UserContext{
+			ID:    uint(req.User.Id),
+			Name:  req.User.Name,
+			Admin: req.User.Admin,
+		})
+		if err != nil {
+			return err
+		}
+
+		// enable supported capabilities
+		if _, ok := instance.(papiv1.Displayer); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_DISPLAYER) {
+				if err := stream.Send(&protobuf.InstanceUpdate{
+					Update: &protobuf.InstanceUpdate_Capable{
+						Capable: protobuf.Capability_DISPLAYER,
+					},
+				}); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("displayer not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+		if _, ok := instance.(papiv1.Messenger); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_MESSENGER) {
+				if err := stream.Send(&protobuf.InstanceUpdate{
+					Update: &protobuf.InstanceUpdate_Capable{
+						Capable: protobuf.Capability_MESSENGER,
+					},
+				}); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("messenger not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+		if _, ok := instance.(papiv1.Configurer); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_CONFIGURER) {
+				if err := stream.Send(&protobuf.InstanceUpdate{
+					Update: &protobuf.InstanceUpdate_Capable{
+						Capable: protobuf.Capability_CONFIGURER,
+					},
+				}); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("configurer not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+		if _, ok := instance.(papiv1.Storager); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_STORAGER) {
+				if err := stream.Send(&protobuf.InstanceUpdate{
+					Update: &protobuf.InstanceUpdate_Capable{
+						Capable: protobuf.Capability_STORAGER,
+					},
+				}); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("storager not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+		if _, ok := instance.(papiv1.Webhooker); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_WEBHOOKER) {
+				if err := stream.Send(&protobuf.InstanceUpdate{
+					Update: &protobuf.InstanceUpdate_Capable{
+						Capable: protobuf.Capability_WEBHOOKER,
+					},
+				}); err != nil {
+					return err
+				}
+			} else {
+				return errors.New("webhooker not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+
+		if messenger, ok := instance.(papiv1.Messenger); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_MESSENGER) {
+				messenger.SetMessageHandler(&shimV1MessageHandler{
+					stream: &stream,
+				})
+			} else {
+				return errors.New("messenger not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+
+		if configurer, ok := instance.(papiv1.Configurer); ok {
+			if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_CONFIGURER) {
+				currentConfig := configurer.DefaultConfig()
+				if req.Config != nil {
+					if err := yaml.Unmarshal(req.Config, &currentConfig); err != nil {
+						return err
+					}
+					if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
+						return err
+					}
+				}
+			} else {
+				return errors.New("configurer not supported by server but V1 API does not support backwards compatibility")
+			}
+		}
+
+		if storager, ok := instance.(papiv1.Storager); ok {
+			storageHandler := &shimV1StorageHandler{
+				mutex:          &sync.RWMutex{},
+				currentStorage: req.Storage,
+				stream:         &stream,
+			}
+			storager.SetStorageHandler(storageHandler)
+		}
+
+		if webhooker, ok := instance.(papiv1.Webhooker); ok {
+			if req.WebhookBasePath != nil {
+				group := s.shim.gin.Group(*req.WebhookBasePath)
+				webhooker.RegisterWebhook(*req.WebhookBasePath, group)
+			}
+		}
+	}
+
+	if err := instance.Enable(); err != nil {
 		return err
 	}
 
-	// enable supported capabilities
-	if _, ok := instance.(papiv1.Displayer); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_DISPLAYER) {
-			if err := stream.Send(&protobuf.InstanceUpdate{
-				Update: &protobuf.InstanceUpdate_Capable{
-					Capable: protobuf.Capability_DISPLAYER,
-				},
-			}); err != nil {
-				return err
-			}
-		} else {
-			return errors.New("displayer not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
-	if _, ok := instance.(papiv1.Messenger); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_MESSENGER) {
-			if err := stream.Send(&protobuf.InstanceUpdate{
-				Update: &protobuf.InstanceUpdate_Capable{
-					Capable: protobuf.Capability_MESSENGER,
-				},
-			}); err != nil {
-				return err
-			}
-		} else {
-			return errors.New("messenger not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
-	if _, ok := instance.(papiv1.Configurer); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_CONFIGURER) {
-			if err := stream.Send(&protobuf.InstanceUpdate{
-				Update: &protobuf.InstanceUpdate_Capable{
-					Capable: protobuf.Capability_CONFIGURER,
-				},
-			}); err != nil {
-				return err
-			}
-		} else {
-			return errors.New("configurer not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
-	if _, ok := instance.(papiv1.Storager); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_STORAGER) {
-			if err := stream.Send(&protobuf.InstanceUpdate{
-				Update: &protobuf.InstanceUpdate_Capable{
-					Capable: protobuf.Capability_STORAGER,
-				},
-			}); err != nil {
-				return err
-			}
-		} else {
-			return errors.New("storager not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
-	if _, ok := instance.(papiv1.Webhooker); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_WEBHOOKER) {
-			if err := stream.Send(&protobuf.InstanceUpdate{
-				Update: &protobuf.InstanceUpdate_Capable{
-					Capable: protobuf.Capability_WEBHOOKER,
-				},
-			}); err != nil {
-				return err
-			}
-		} else {
-			return errors.New("webhooker not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
+	defer instance.Disable()
 
-	if messenger, ok := instance.(papiv1.Messenger); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_MESSENGER) {
-			messenger.SetMessageHandler(&shimV1MessageHandler{
-				stream: &stream,
-			})
-		} else {
-			return errors.New("messenger not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
-
-	if configurer, ok := instance.(papiv1.Configurer); ok {
-		if slices.Contains(req.ServerInfo.Capabilities, protobuf.Capability_CONFIGURER) {
-			currentConfig := configurer.DefaultConfig()
-			if req.Config != nil {
-				if err := yaml.Unmarshal(req.Config, &currentConfig); err != nil {
-					return err
-				}
-				if err := configurer.ValidateAndSetConfig(currentConfig); err != nil {
-					return err
-				}
-			}
-		} else {
-			return errors.New("configurer not supported by server but V1 API does not support backwards compatibility")
-		}
-	}
-
-	if storager, ok := instance.(papiv1.Storager); ok {
-		storageHandler := &shimV1StorageHandler{
-			mutex:          &sync.RWMutex{},
-			currentStorage: req.Storage,
-			stream:         &stream,
-		}
-		storager.SetStorageHandler(storageHandler)
-	}
-
-	if webhooker, ok := instance.(papiv1.Webhooker); ok {
-		if req.WebhookBasePath != nil {
-			group := s.shim.gin.Group(*req.WebhookBasePath)
-			webhooker.RegisterWebhook(*req.WebhookBasePath, group)
-		}
-	}
-
-	s.shim.mu.Lock()
 	s.shim.instances[req.User.Id] = instance
-	s.shim.mu.Unlock()
+	unlockOnce.Do(func() {
+		s.shim.mu.Unlock()
+	})
 
-	<-s.shim.shutdown
-	return nil
+	ticker := time.NewTicker(15 * time.Second)
+
+	if testing.Testing() {
+		ticker.Stop()
+		ticker = time.NewTicker(5 * time.Millisecond)
+	}
+
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if err := stream.Send(&protobuf.InstanceUpdate{
+				Update: &protobuf.InstanceUpdate_Ping{
+					Ping: new(emptypb.Empty),
+				},
+			}); err != nil {
+				return err
+			}
+		case <-s.shim.shutdown:
+			return nil
+		}
+	}
 }

@@ -13,15 +13,19 @@ func GetGotifyPluginInfo() plugin.Info {
 }
 
 // Plugin is plugin instance
-type Plugin struct{}
+type Plugin struct {
+	enabled bool
+}
 
 // Enable implements plugin.Plugin
 func (c *Plugin) Enable() error {
+	c.enabled = true
 	return nil
 }
 
 // Disable implements plugin.Plugin
 func (c *Plugin) Disable() error {
+	c.enabled = false
 	return nil
 }
 
